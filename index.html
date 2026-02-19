@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>♟ Chess Leaderboard — Рейтинг друзей</title>
+    <meta name="description" content="Таблица лидеров Chess.com для отслеживания рейтингов друзей в шахматах. Рапид, Блиц, Пуля.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Admin Login Overlay -->
+    <div id="admin-login-overlay" class="overlay hidden">
+        <div class="overlay-card">
+            <h2>🔐 Вход для администратора</h2>
+            <p>Введите пароль для доступа к управлению игроками.</p>
+            <input type="password" id="admin-password-input" placeholder="Пароль" autocomplete="off">
+            <div id="admin-login-error" class="error-msg hidden">Неверный пароль</div>
+            <div class="overlay-actions">
+                <button id="admin-login-cancel" class="btn btn-secondary">Отмена</button>
+                <button id="admin-login-submit" class="btn btn-primary">Войти</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel Overlay -->
+    <div id="admin-panel-overlay" class="overlay hidden">
+        <div class="overlay-card overlay-card-wide">
+            <div class="admin-header">
+                <h2>⚙️ Панель администратора</h2>
+                <button id="admin-panel-close" class="btn-icon" title="Закрыть">&times;</button>
+            </div>
+            <div class="admin-add-section">
+                <h3>Добавить игрока</h3>
+                <div class="admin-add-row">
+                    <input type="text" id="add-player-input" placeholder="Никнейм Chess.com" autocomplete="off">
+                    <button id="add-player-btn" class="btn btn-primary">+ Добавить</button>
+                </div>
+                <div id="add-player-error" class="error-msg hidden"></div>
+                <div id="add-player-success" class="success-msg hidden"></div>
+            </div>
+            <div class="admin-list-section">
+                <h3>Текущие игроки</h3>
+                <ul id="admin-players-list" class="admin-players-list">
+                    <!-- Filled by JS -->
+                </ul>
+            </div>
+            <div class="admin-footer">
+                <button id="admin-change-password-btn" class="btn btn-secondary">Сменить пароль</button>
+                <button id="admin-logout-btn" class="btn btn-danger">Выйти</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Overlay -->
+    <div id="change-password-overlay" class="overlay hidden">
+        <div class="overlay-card">
+            <h2>🔑 Сменить пароль</h2>
+            <input type="password" id="new-password-input" placeholder="Новый пароль" autocomplete="off">
+            <input type="password" id="confirm-password-input" placeholder="Повторите пароль" autocomplete="off">
+            <div id="change-password-error" class="error-msg hidden"></div>
+            <div class="overlay-actions">
+                <button id="change-password-cancel" class="btn btn-secondary">Отмена</button>
+                <button id="change-password-submit" class="btn btn-primary">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-top">
+                <div class="logo-area">
+                    <span class="logo-icon">♟</span>
+                    <div>
+                        <h1>Chess Leaderboard</h1>
+                        <p class="subtitle">Рейтинг друзей на Chess.com</p>
+                    </div>
+                </div>
+                <button id="admin-btn" class="btn btn-admin" title="Панель администратора">
+                    <span class="admin-icon">⚙️</span>
+                    <span class="admin-label">Админ</span>
+                </button>
+            </div>
+            <div class="meta-bar">
+                <span id="last-updated" class="meta-text">Загрузка...</span>
+                <button id="refresh-btn" class="btn btn-refresh" title="Обновить данные">
+                    <span class="refresh-icon">↻</span> Обновить
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <div id="loading-spinner" class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Загрузка рейтингов...</p>
+            </div>
+
+            <div id="error-banner" class="error-banner hidden">
+                <span id="error-text"></span>
+            </div>
+
+            <div class="table-wrapper" id="table-wrapper" style="display:none;">
+                <table class="leaderboard-table" id="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th class="col-rank">#</th>
+                            <th class="col-player">Игрок</th>
+                            <th class="col-rating sortable" data-sort="rapid" id="th-rapid">
+                                <span class="th-content">
+                                    <span class="mode-icon">⏱</span> Рапид
+                                    <span class="sort-arrow active">▼</span>
+                                </span>
+                            </th>
+                            <th class="col-rating sortable" data-sort="blitz" id="th-blitz">
+                                <span class="th-content">
+                                    <span class="mode-icon">⚡</span> Блиц
+                                    <span class="sort-arrow">▼</span>
+                                </span>
+                            </th>
+                            <th class="col-rating sortable" data-sort="bullet" id="th-bullet">
+                                <span class="th-content">
+                                    <span class="mode-icon">🔫</span> Пуля
+                                    <span class="sort-arrow">▼</span>
+                                </span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>Данные предоставлены <a href="https://www.chess.com" target="_blank" rel="noopener">Chess.com</a> Public API</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
