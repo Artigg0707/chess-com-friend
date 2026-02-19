@@ -6,11 +6,21 @@
     'use strict';
 
     // ===== CONFIG =====
-    const DEFAULT_FRIENDS = ['thcffh', 'aledmap', 'Hunster226622', 'nekoo000', 'Brdish'];
-    const STORAGE_KEY_PLAYERS = 'chess_leaderboard_players';
+    // New list including j_Cone
+    const DEFAULT_FRIENDS = [
+        'thcffh',
+        'aledmap',
+        'Hunster226622',
+        'nekoo000',
+        'Brdish',
+        'j_Cone'
+    ];
+
+    // Changed key to force update defaults (v2)
+    const STORAGE_KEY_PLAYERS = 'chess_leaderboard_players_v2';
     const STORAGE_KEY_ADMIN = 'chess_leaderboard_admin_hash';
     const STORAGE_KEY_LOGGED = 'chess_leaderboard_logged_in';
-    const DEFAULT_PASSWORD = 'admin'; // Default admin password — change on first login
+    const DEFAULT_PASSWORD = 'admin';
 
     const DEFAULT_AVATAR = 'data:image/svg+xml;base64,' + btoa(`
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
@@ -65,13 +75,33 @@
         thBullet: $('#th-bullet'),
     };
 
-    // ===== HASHING (simple for client-side, not production security) =====
+    // ===== UTILS =====
     async function hashPassword(password) {
         const encoder = new TextEncoder();
         const data = encoder.encode(password + '_chess_leaderboard_salt');
         const hashBuffer = await crypto.subtle.digest('SHA-256', data);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // Helper: Fetch with timeout
+    async function fetchWithTimeout(resource, options = {}) {
+        const { timeout = 8000 } = options;
+
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+
+        try {
+            const response = await fetch(resource, {
+                ...options,
+                signal: controller.signal
+            });
+            clearTimeout(id);
+            return response;
+        } catch (error) {
+            clearTimeout(id);
+            throw error;
+        }
     }
 
     // ===== STORAGE =====
@@ -82,9 +112,10 @@
                 const parsed = JSON.parse(stored);
                 if (Array.isArray(parsed) && parsed.length > 0) return parsed;
             }
-        } catch (e) { /* ignore */ }
-        // Initialize with defaults
-        localStorage.setItem(STORAGE_KEY_PLAYERS, JSON.stringify(DEFAULT_FRIENDS));
+        } catch (e) { console.error('Storage error', e); }
+
+        // If no stored players (or old version), init with default
+        savePlayers(DEFAULT_FRIENDS);
         return [...DEFAULT_FRIENDS];
     }
 
@@ -111,35 +142,44 @@
 
     // ===== CHESS.COM API =====
     async function fetchPlayerData(username) {
-        const [profileRes, statsRes] = await Promise.all([
-            fetch(`https://api.chess.com/pub/player/${username.toLowerCase()}`),
-            fetch(`https://api.chess.com/pub/player/${username.toLowerCase()}/stats`),
-        ]);
+        try {
+            const [profileRes, statsRes] = await Promise.all([
+                fetchWithTimeout(`https://api.chess.com/pub/player/${username.toLowerCase()}`),
+                fetchWithTimeout(`https://api.chess.com/pub/player/${username.toLowerCase()}/stats`),
+            ]);
 
-        if (!profileRes.ok) throw new Error(`Profile not found for ${username}`);
-
-        const profile = await profileRes.json();
-        const stats = statsRes.ok ? await statsRes.json() : {};
-
-        const getRating = (mode) => {
-            if (stats[mode] && stats[mode].last && stats[mode].last.rating) {
-                return stats[mode].last.rating;
+            if (!profileRes.ok) {
+                throw new Error(`Player ${username} not found (Status: ${profileRes.status})`);
             }
-            return null;
-        };
 
-        return {
-            username: profile.username || username,
-            avatar: profile.avatar || DEFAULT_AVATAR,
-            url: profile.url || `https://www.chess.com/member/${username}`,
-            rapid: getRating('chess_rapid'),
-            blitz: getRating('chess_blitz'),
-            bullet: getRating('chess_bullet'),
-        };
+            const profile = await profileRes.json();
+            const stats = statsRes.ok ? await statsRes.json() : {};
+
+            const getRating = (mode) => {
+                if (stats[mode] && stats[mode].last && stats[mode].last.rating) {
+                    return stats[mode].last.rating;
+                }
+                return null;
+            };
+
+            return {
+                username: profile.username || username,
+                avatar: profile.avatar || DEFAULT_AVATAR,
+                url: profile.url || `https://www.chess.com/member/${username}`,
+                rapid: getRating('chess_rapid'),
+                blitz: getRating('chess_blitz'),
+                bullet: getRating('chess_bullet'),
+            };
+        } catch (err) {
+            console.error(`Error fetching ${username}:`, err);
+            throw err;
+        }
     }
 
     async function fetchAllPlayers() {
         const players = getPlayers();
+        console.log("Loading players list:", players);
+
         const results = await Promise.allSettled(
             players.map(username => fetchPlayerData(username))
         );
@@ -152,6 +192,7 @@
                 successData.push(result.value);
             } else {
                 errors.push(players[i]);
+                console.warn(`Failed to load ${players[i]}:`, result.reason);
             }
         });
 
@@ -173,7 +214,7 @@
             const arrow = th.querySelector('.sort-arrow');
             const isActive = th.dataset.sort === mode;
             th.classList.toggle('active-sort', isActive);
-            arrow.classList.toggle('active', isActive);
+            if (arrow) arrow.classList.toggle('active', isActive);
         });
     }
 
@@ -181,6 +222,11 @@
     function renderTable(data) {
         const sorted = sortPlayers(data, currentSort);
         dom.tableBody.innerHTML = '';
+
+        if (!data || data.length === 0) {
+            dom.tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#6b6560;">Нет данных для отображения</td></tr>';
+            return;
+        }
 
         sorted.forEach((player, idx) => {
             const rank = idx + 1;
@@ -218,26 +264,27 @@
     }
 
     function showLoading() {
-        dom.loadingSpinner.style.display = '';
-        dom.tableWrapper.style.display = 'none';
-        dom.errorBanner.classList.add('hidden');
+        if (dom.loadingSpinner) dom.loadingSpinner.style.display = '';
+        if (dom.tableWrapper) dom.tableWrapper.style.display = 'none';
+        if (dom.errorBanner) dom.errorBanner.classList.add('hidden');
     }
 
     function showTable() {
-        dom.loadingSpinner.style.display = 'none';
-        dom.tableWrapper.style.display = '';
+        if (dom.loadingSpinner) dom.loadingSpinner.style.display = 'none';
+        if (dom.tableWrapper) dom.tableWrapper.style.display = '';
     }
 
     function showError(message) {
-        dom.errorText.textContent = message;
-        dom.errorBanner.classList.remove('hidden');
+        if (dom.errorText) dom.errorText.textContent = message;
+        if (dom.errorBanner) dom.errorBanner.classList.remove('hidden');
     }
 
     function hideError() {
-        dom.errorBanner.classList.add('hidden');
+        if (dom.errorBanner) dom.errorBanner.classList.add('hidden');
     }
 
     function updateTimestamp() {
+        if (!dom.lastUpdated) return;
         const now = new Date();
         const time = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
         const date = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
@@ -248,32 +295,43 @@
     async function loadLeaderboard() {
         showLoading();
         hideError();
-        dom.refreshBtn.classList.add('spinning');
+        if (dom.refreshBtn) dom.refreshBtn.classList.add('spinning');
 
         try {
-            const { data, errors } = await fetchAllPlayers();
+            // Add slight delay to ensure UI updates before heavy processing
+            await new Promise(r => setTimeout(r, 100));
 
+            const { data, errors } = await fetchAllPlayers();
             playersData = data;
 
-            if (data.length === 0 && errors.length > 0) {
-                showError('Не удалось загрузить данные ни одного игрока. Проверьте никнеймы.');
-                dom.loadingSpinner.style.display = 'none';
-                return;
+            // Always try to show table if we have at least ONE player
+            if (data.length > 0) {
+                renderTable(data);
+                showTable();
+            } else {
+                // No data at all
+                showError('Не удалось загрузить данные ни одного игрока.');
+                if (dom.loadingSpinner) dom.loadingSpinner.style.display = 'none';
             }
 
+            // Show partial errors if any
             if (errors.length > 0) {
-                showError(`Не удалось загрузить: ${errors.join(', ')}`);
+                const errorMsg = `Не удалось загрузить: ${errors.join(', ')}`;
+                if (data.length > 0) {
+                    // Show as small error but keep table
+                    showError(errorMsg + ' (показаны остальные)');
+                } else {
+                    showError(errorMsg);
+                }
             }
 
-            renderTable(data);
-            showTable();
             updateTimestamp();
         } catch (err) {
-            showError('Произошла ошибка при загрузке данных. Попробуйте позже.');
-            dom.loadingSpinner.style.display = 'none';
+            showError('Ошибка загрузки. Проверьте подключение к интернету.');
+            if (dom.loadingSpinner) dom.loadingSpinner.style.display = 'none';
             console.error(err);
         } finally {
-            dom.refreshBtn.classList.remove('spinning');
+            if (dom.refreshBtn) dom.refreshBtn.classList.remove('spinning');
         }
     }
 
@@ -290,11 +348,10 @@
             dom.adminPlayersList.appendChild(li);
         });
 
-        // Bind remove buttons
         dom.adminPlayersList.querySelectorAll('.btn-remove').forEach(btn => {
             btn.addEventListener('click', () => {
                 const nameToRemove = btn.dataset.name;
-                const players = getPlayers().filter(p => p.toLowerCase() !== nameToRemove.toLowerCase());
+                const players = getPlayers().filter(p => p.toLowerCase() !== nameToRemove.toLowerCase()); // Case insensitive remove
                 savePlayers(players);
                 renderAdminPlayersList();
                 loadLeaderboard();
@@ -303,26 +360,23 @@
     }
 
     function openOverlay(overlay) {
+        if (!overlay) return;
         overlay.classList.remove('hidden');
-        // Focus first input
         const input = overlay.querySelector('input');
         if (input) setTimeout(() => input.focus(), 100);
     }
 
     function closeOverlay(overlay) {
+        if (!overlay) return;
         overlay.classList.add('hidden');
-        // Clear inputs
         overlay.querySelectorAll('input').forEach(i => i.value = '');
-        // Hide errors/success
         overlay.querySelectorAll('.error-msg, .success-msg').forEach(el => el.classList.add('hidden'));
     }
 
     // ===== EVENT LISTENERS =====
     function initEvents() {
-        // Refresh
-        dom.refreshBtn.addEventListener('click', loadLeaderboard);
+        if (dom.refreshBtn) dom.refreshBtn.addEventListener('click', loadLeaderboard);
 
-        // Sort headers
         $$('.sortable').forEach(th => {
             th.addEventListener('click', () => {
                 const mode = th.dataset.sort;
@@ -331,8 +385,7 @@
             });
         });
 
-        // Admin button
-        dom.adminBtn.addEventListener('click', () => {
+        if (dom.adminBtn) dom.adminBtn.addEventListener('click', () => {
             if (isLoggedIn()) {
                 renderAdminPlayersList();
                 openOverlay(dom.adminPanelOverlay);
@@ -341,51 +394,31 @@
             }
         });
 
-        // Admin login
-        dom.adminLoginCancel.addEventListener('click', () => closeOverlay(dom.adminLoginOverlay));
-        dom.adminLoginSubmit.addEventListener('click', handleAdminLogin);
-        dom.adminPasswordInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') handleAdminLogin();
-        });
+        // Safe event binding
+        const bind = (el, event, handler) => { if (el) el.addEventListener(event, handler); };
 
-        // Admin panel
-        dom.adminPanelClose.addEventListener('click', () => closeOverlay(dom.adminPanelOverlay));
-        dom.addPlayerBtn.addEventListener('click', handleAddPlayer);
-        dom.addPlayerInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') handleAddPlayer();
-        });
-        dom.adminLogoutBtn.addEventListener('click', () => {
-            setLoggedIn(false);
-            closeOverlay(dom.adminPanelOverlay);
-        });
-        dom.adminChangePasswordBtn.addEventListener('click', () => {
-            closeOverlay(dom.adminPanelOverlay);
-            openOverlay(dom.changePasswordOverlay);
-        });
+        bind(dom.adminLoginCancel, 'click', () => closeOverlay(dom.adminLoginOverlay));
+        bind(dom.adminLoginSubmit, 'click', handleAdminLogin);
+        bind(dom.adminPasswordInput, 'keydown', (e) => { if (e.key === 'Enter') handleAdminLogin(); });
 
-        // Change password
-        dom.changePasswordCancel.addEventListener('click', () => {
-            closeOverlay(dom.changePasswordOverlay);
-            renderAdminPlayersList();
-            openOverlay(dom.adminPanelOverlay);
-        });
-        dom.changePasswordSubmit.addEventListener('click', handleChangePassword);
-        dom.confirmPasswordInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') handleChangePassword();
-        });
+        bind(dom.adminPanelClose, 'click', () => closeOverlay(dom.adminPanelOverlay));
+        bind(dom.addPlayerBtn, 'click', handleAddPlayer);
+        bind(dom.addPlayerInput, 'keydown', (e) => { if (e.key === 'Enter') handleAddPlayer(); });
+        bind(dom.adminLogoutBtn, 'click', () => { setLoggedIn(false); closeOverlay(dom.adminPanelOverlay); });
+        bind(dom.adminChangePasswordBtn, 'click', () => { closeOverlay(dom.adminPanelOverlay); openOverlay(dom.changePasswordOverlay); });
 
-        // Close overlays on background click
+        bind(dom.changePasswordCancel, 'click', () => { closeOverlay(dom.changePasswordOverlay); renderAdminPlayersList(); openOverlay(dom.adminPanelOverlay); });
+        bind(dom.changePasswordSubmit, 'click', handleChangePassword);
+        bind(dom.confirmPasswordInput, 'keydown', (e) => { if (e.key === 'Enter') handleChangePassword(); });
+
         [dom.adminLoginOverlay, dom.adminPanelOverlay, dom.changePasswordOverlay].forEach(overlay => {
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) closeOverlay(overlay);
-            });
+            bind(overlay, 'click', (e) => { if (e.target === overlay) closeOverlay(overlay); });
         });
 
-        // Close overlays on Escape
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 [dom.adminLoginOverlay, dom.adminPanelOverlay, dom.changePasswordOverlay].forEach(overlay => {
-                    if (!overlay.classList.contains('hidden')) closeOverlay(overlay);
+                    if (overlay && !overlay.classList.contains('hidden')) closeOverlay(overlay);
                 });
             }
         });
@@ -429,12 +462,11 @@
             return;
         }
 
-        // Verify the player exists on Chess.com
         dom.addPlayerBtn.disabled = true;
         dom.addPlayerBtn.textContent = 'Проверка...';
 
         try {
-            const res = await fetch(`https://api.chess.com/pub/player/${username.toLowerCase()}`);
+            const res = await fetchWithTimeout(`https://api.chess.com/pub/player/${username.toLowerCase()}`);
             if (!res.ok) {
                 dom.addPlayerError.textContent = `Игрок "${username}" не найден на Chess.com`;
                 dom.addPlayerError.classList.remove('hidden');
@@ -443,7 +475,7 @@
 
             const profile = await res.json();
             players.push(profile.username || username);
-            savePlayers(players);
+            savePlayers(players); // Save immediately
             renderAdminPlayersList();
 
             dom.addPlayerInput.value = '';
@@ -453,7 +485,7 @@
 
             loadLeaderboard();
         } catch (err) {
-            dom.addPlayerError.textContent = 'Ошибка сети. Попробуйте позже.';
+            dom.addPlayerError.textContent = 'Ошибка сети или API недоступен.';
             dom.addPlayerError.classList.remove('hidden');
         } finally {
             dom.addPlayerBtn.disabled = false;
@@ -493,7 +525,6 @@
         loadLeaderboard();
     }
 
-    // Wait for DOM
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
