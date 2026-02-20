@@ -14,7 +14,7 @@
         <!-- Вкладки -->
         <div class="tabs">
             <button class="tab-btn active" data-tab="rating" onclick="switchTab('rating')">📊 Рейтинг</button>
-            <button class="tab-btn" data-tab="history" onclick="switchTab('history')">⚔️ История партий между нами</button>
+            <button class="tab-btn" data-tab="history" onclick="switchTab('history')">⚔️ История партий</button>
             <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">💬 Общий чат</button>
         </div>
 
@@ -55,43 +55,45 @@
                 <p class="loading">Загрузка...</p>
             </div>
         </div>
-
         <!-- ── ВКЛАДКА: ЧАТ ── -->
         <div id="tab-chat" class="tab-content">
-            <div class="chat-header">
-                <span id="chat-user-label"></span>
-                <button onclick="changeNickname()" class="change-nick-btn">✏️ Сменить ник</button>
+            <div class="chat-container">
+                <div id="chat-messages" class="chat-messages">
+                    <div class="chat-placeholder">Выберите ник, чтобы начать общение...</div>
+                </div>
+                <div class="chat-controls">
+                    <input type="text" id="chat-input" placeholder="Напишите сообщение..." disabled>
+                    <button onclick="sendMessage()" id="chat-send-btn" disabled>➤</button>
+                </div>
             </div>
-            <div id="chat-messages" class="chat-messages">
-                <div class="chat-placeholder">Загрузка сообщений...</div>
-            </div>
-            <div class="chat-input-area">
-                <input type="text" id="chat-input" placeholder="Напишите сообщение..." maxlength="500"
-                       onkeydown="if(event.key==='Enter') sendMessage()">
-                <button onclick="sendMessage()" class="chat-send-btn">➤</button>
+        </div>
+
+        <!-- МОДАЛЬНОЕ ОКНО: ВХОД В ЧАТ -->
+        <div id="login-modal" class="modal-overlay">
+            <div class="modal">
+                <h2>👋 Добро пожаловать!</h2>
+                <p>Представьтесь, чтобы войти в чат:</p>
+                
+                <div class="login-options">
+                    <label>Выберите из списка:</label>
+                    <select id="login-select">
+                        <option value="" disabled selected>Кто вы?</option>
+                        <!-- Друзья подгрузятся через JS -->
+                    </select>
+                    
+                    <div class="divider"><span>или</span></div>
+                    
+                    <label>Введите свой ник:</label>
+                    <input type="text" id="login-input" placeholder="Ваше имя">
+                </div>
+
+                <div class="modal-actions">
+                    <button onclick="loginChat()" class="login-btn">Войти</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ── МОДАЛ: ВЫБОР НИКНЕЙМА ── -->
-    <div id="nickname-modal" class="modal-overlay hidden">
-        <div class="modal-box">
-            <div class="modal-icon">♟️</div>
-            <h2>Кто ты?</h2>
-            <p class="modal-subtitle">Выбери свой никнейм, чтобы писать в чат</p>
-            <div id="modal-friends-list" class="modal-friends"></div>
-            <div class="modal-or"><span>или введи любой</span></div>
-            <div class="modal-input-row">
-                <input type="text" id="nickname-input" placeholder="Никнейм..." maxlength="30"
-                       onkeydown="if(event.key==='Enter') saveNickname()">
-                <button onclick="saveNickname()" class="modal-enter-btn">Войти →</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase SDK (Realtime Database) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

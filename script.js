@@ -9,37 +9,11 @@ if (localStorage.getItem('chessboardFriends')) {
 let playersData = [];
 let currentSort = 'rapid';
 let gamesLoaded  = false;  // флаг: история уже загружена?
+let currentUser  = null;   // текущий залогиненный пользователь
+let allMessages  = [];     // массив сообщений чата
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FIREBASE — вставьте свои данные из Firebase Console → Project Settings
-// Инструкция: console.firebase.google.com → New project → Realtime Database
-// ═══════════════════════════════════════════════════════════════════════════════
-const firebaseConfig = {
-    apiKey:            'PASTE_YOUR_API_KEY',
-    authDomain:        'PASTE_YOUR_PROJECT.firebaseapp.com',
-    databaseURL:       'https://PASTE_YOUR_PROJECT-default-rtdb.firebaseio.com/',
-    projectId:         'PASTE_YOUR_PROJECT_ID',
-    storageBucket:     'PASTE_YOUR_PROJECT.appspot.com',
-    messagingSenderId: 'PASTE_YOUR_SENDER_ID',
-    appId:             'PASTE_YOUR_APP_ID'
-};
-
-let db            = null;
-let chatListener  = null;
-let firebaseReady = false;
-let currentNickname = localStorage.getItem('chatNickname') || null;
-
-function initFirebase() {
-    if (firebaseConfig.apiKey === 'PASTE_YOUR_API_KEY') return; // конфиг не задан
-    try {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-        firebaseReady = true;
-    } catch(e) {
-        console.warn('Firebase init error:', e);
-    }
-}
-initFirebase();
+// Канал для синхронизации вкладок
+const chatChannel = new BroadcastChannel('chess_friends_chat');
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ВКЛАДКИ
@@ -56,15 +30,188 @@ function switchTab(tabName) {
     if (tabName === 'history' && !gamesLoaded) {
         loadGamesHistory();
     }
-
-    // Чат: требуем ник, затем загружаем сообщения
+    
+    // При переключении на чат проверяем авторизацию
     if (tabName === 'chat') {
-        if (!currentNickname) {
-            document.getElementById('nickname-modal').classList.remove('hidden');
-        } else {
-            loadChat();
-        }
+        initChat();
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ЧАТ И АВТОРИЗАЦИЯ
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Инициализация (запуск) после старта страницы
+window.addEventListener('load', () => {
+    // Включаем слушатель на BroadcastChannel
+    chatChannel.onmessage = (event) => {
+        // Если пришло сообщение с другого таба, перечитываем историю
+        // (даже если мы не на вкладке чата, лучше обновить данные)
+        loadMessages();
+        renderMessages();
+    };
+});
+
+function initChat() {
+    // Проверяем, есть ли сохранённый пользователь
+    // Но мы должны убедиться, что список друзей в селекте актуален перед показом модалки
+    updateLoginSelect();
+
+    const savedUser = localStorage.getItem('chatUser');
+    
+    if (savedUser) {
+        currentUser = savedUser;
+        // Показываем чат
+        loadMessages();
+        enableChatInput();
+        renderMessages();
+    } else {
+        // Показываем модалку
+        showLoginModal();
+    }
+}
+
+function updateLoginSelect() {
+    const select = document.getElementById('login-select');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="" disabled selected>Кто вы?</option>';
+    friends.forEach(friend => {
+        const option = document.createElement('option');
+        option.value = friend;
+        option.textContent = friend;
+        select.appendChild(option);
+    });
+}
+
+function showLoginModal() {
+    const modal = document.getElementById('login-modal');
+    modal.classList.add('active');
+}
+
+function loginChat() {
+    const select = document.getElementById('login-select');
+    const input  = document.getElementById('login-input');
+    
+    const selectedUser = select.value;
+    const typedUser    = input.value.trim();
+    
+    // Если пользователь выбрал "Кто вы?" (значение ""), то selectedUser будет пуст
+    // Если пользователь ничего не ввел, typedUser будет пуст
+    
+    let userToLogin = typedUser;
+    if (!userToLogin && selectedUser) {
+        userToLogin = selectedUser;
+    }
+    
+    if (!userToLogin) {
+        alert('Пожалуйста, выберите ник или введите свой!');
+        return;
+    }
+    
+    currentUser = userToLogin;
+    localStorage.setItem('chatUser', currentUser);
+    
+    // Скрываем модалку
+    document.getElementById('login-modal').classList.remove('active');
+    
+    // Включаем чат
+    loadMessages();
+    enableChatInput();
+    renderMessages();
+}
+
+function enableChatInput() {
+    const input = document.getElementById('chat-input');
+    const btn   = document.getElementById('chat-send-btn');
+    
+    input.disabled = false;
+    btn.disabled = false;
+    input.focus();
+    
+    // Удаляем старые слушатели, чтобы не дублировать (хотя enable вызывается 1 раз)
+    // Но лучше просто добавить onkeypress в HTML или проверить
+    input.onkeypress = function(e) {
+        if (e.key === 'Enter') sendMessage();
+    };
+}
+
+function loadMessages() {
+    const stored = localStorage.getItem('chatMessages');
+    allMessages = stored ? JSON.parse(stored) : [];
+}
+
+function renderMessages() {
+    const container = document.getElementById('chat-messages');
+    if (!container) return; // если вдруг DOM не готов
+    
+    if (allMessages.length === 0) {
+        container.innerHTML = '<div class="chat-placeholder">История пуста. Начните общение первым!</div>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    allMessages.forEach(msg => {
+        const isMine = (msg.user === currentUser);
+        
+        const div = document.createElement('div');
+        div.className = `message ${isMine ? 'mine' : 'theirs'}`;
+        
+        const meta = document.createElement('div');
+        meta.className = 'message-meta';
+        
+        // Время (HH:MM)
+        const dateObj = new Date(msg.timestamp);
+        const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // В мета-инфе: Имя + Время
+        // Для своих сообщений имя можно не писать или писать "Вы"
+        const displayName = isMine ? 'Вы' : msg.user;
+        
+        meta.innerHTML = `<span>${displayName}</span> <span>${timeStr}</span>`;
+        
+        const textDiv = document.createElement('div');
+        // Защита от XSS: используем textContent
+        textDiv.textContent = msg.text;
+        
+        div.appendChild(meta);
+        div.appendChild(textDiv);
+        
+        container.appendChild(div);
+    });
+    
+    // Скролл вниз
+    container.scrollTop = container.scrollHeight;
+}
+
+function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const text  = input.value.trim();
+    
+    if (!text) return;
+    
+    const newMessage = {
+        id: Date.now(),
+        user: currentUser,
+        text: text,
+        timestamp: Date.now()
+    };
+    
+    // Обновляем локальный массив
+    allMessages.push(newMessage);
+    
+    // Сохраняем в localStorage
+    localStorage.setItem('chatMessages', JSON.stringify(allMessages));
+    
+    // Чистим инпут
+    input.value = '';
+    
+    // Рендерим у себя
+    renderMessages();
+    
+    // Оповещаем другие вкладки
+    chatChannel.postMessage({ type: 'new_message', data: newMessage });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -188,7 +335,21 @@ function addPlayer() {
     friends.push(username);
     localStorage.setItem('chessboardFriends', JSON.stringify(friends));
     input.value  = '';
-    gamesLoaded  = false;  // сбрасываем кэш, чтобы история перезагрузилась с новым игроком
+    gamesLoaded  = false;
+    
+    // Если мы на вкладке чата, обновляем список в модалке (вдруг она открыта)
+    const select = document.getElementById('login-select');
+    if (select) {
+        // Очищаем и заново заполняем
+        select.innerHTML = '<option value="" disabled selected>Кто вы?</option>';
+        friends.forEach(friend => {
+            const option = document.createElement('option');
+            option.value = friend;
+            option.textContent = friend;
+            select.appendChild(option);
+        });
+    }
+
     buildLeaderboard();
 }
 
@@ -361,183 +522,7 @@ function renderGames(games) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// НИКНЕЙМ
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function initNicknameModal() {
-    // Заполняем кнопки из текущего списка друзей
-    const list = document.getElementById('modal-friends-list');
-    list.innerHTML = friends.map(f =>
-        `<button class="modal-friend-btn" onclick="pickFriendNick('${f}')">${f}</button>`
-    ).join('');
-
-    updateChatHeader();
-    // Модал открывается только при переходе на вкладку чата, не сразу
-}
-
-function pickFriendNick(name) {
-    document.getElementById('nickname-input').value = name;
-    saveNickname();
-}
-
-function saveNickname() {
-    const input = document.getElementById('nickname-input');
-    const name  = input.value.trim();
-    if (!name) { input.focus(); return; }
-
-    currentNickname = name;
-    localStorage.setItem('chatNickname', name);
-    document.getElementById('nickname-modal').classList.add('hidden');
-    updateChatHeader();
-
-    // Если чат уже открыт — загружаем сообщения
-    if (document.getElementById('tab-chat').classList.contains('active')) {
-        loadChat();
-    }
-}
-
-function changeNickname() {
-    currentNickname = null;
-    localStorage.removeItem('chatNickname');
-    document.getElementById('nickname-input').value = '';
-    document.getElementById('nickname-modal').classList.remove('hidden');
-    updateChatHeader();
-}
-
-function updateChatHeader() {
-    const label = document.getElementById('chat-user-label');
-    if (!label) return;
-    label.innerHTML = currentNickname
-        ? `Вы в чате как: <strong>${currentNickname}</strong>`
-        : '<span style="color:#a0a0a0">Никнейм не выбран</span>';
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ЧАТ
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function loadChat() {
-    const box = document.getElementById('chat-messages');
-
-    if (!firebaseReady) {
-        box.innerHTML = `
-            <div class="chat-firebase-error">
-                <span class="fire-icon">🔥</span>
-                <strong>Чат не настроен</strong><br><br>
-                Создайте бесплатный проект на
-                <a href="https://console.firebase.google.com/" target="_blank">Firebase</a>,
-                включите <strong>Realtime Database</strong> и вставьте конфиг
-                в начало файла <code>script.js</code>.
-            </div>
-        `;
-        return;
-    }
-
-    // Отключаем старый listener
-    if (chatListener) {
-        db.ref('chat/messages').off('value', chatListener);
-        chatListener = null;
-    }
-
-    box.innerHTML = '<div class="chat-placeholder">Загрузка сообщений...</div>';
-
-    chatListener = db.ref('chat/messages').limitToLast(120).on('value', snap => {
-        const data = snap.val();
-        renderChatMessages(data ? Object.values(data) : []);
-    });
-}
-
-function renderChatMessages(messages) {
-    const box = document.getElementById('chat-messages');
-
-    if (messages.length === 0) {
-        box.innerHTML = '<div class="chat-placeholder">Сообщений пока нет. Напишите первым! 👋</div>';
-        return;
-    }
-
-    // Сортируем по времени (старые сверху)
-    messages.sort((a, b) => a.ts - b.ts);
-
-    let html      = '';
-    let lastDate  = null;
-
-    for (const msg of messages) {
-        // Разделитель по дате
-        const dateStr = new Date(msg.ts).toLocaleDateString('ru-RU', {
-            day: 'numeric', month: 'long', year: 'numeric'
-        });
-        if (dateStr !== lastDate) {
-            html += `<div class="msg-date-divider">${dateStr}</div>`;
-            lastDate = dateStr;
-        }
-
-        if (msg.type === 'system') {
-            html += `<div class="msg-system">${escapeHtml(msg.text)}</div>`;
-            continue;
-        }
-
-        const isOwn     = msg.author === currentNickname;
-        const wrapClass = isOwn ? 'own' : 'other';
-        const time      = new Date(msg.ts).toLocaleTimeString('ru-RU', {
-            hour: '2-digit', minute: '2-digit'
-        });
-
-        html += `
-            <div class="msg-wrapper ${wrapClass}">
-                ${!isOwn ? `<div class="msg-author">${escapeHtml(msg.author)}</div>` : ''}
-                <div class="msg-bubble">${escapeHtml(msg.text)}</div>
-                <div class="msg-time">${time}</div>
-            </div>
-        `;
-    }
-
-    box.innerHTML = html;
-    box.scrollTop = box.scrollHeight;
-}
-
-function escapeHtml(str) {
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
-async function sendMessage() {
-    if (!firebaseReady) return;
-
-    if (!currentNickname) {
-        document.getElementById('nickname-modal').classList.remove('hidden');
-        return;
-    }
-
-    const input = document.getElementById('chat-input');
-    const text  = input.value.trim();
-    if (!text) return;
-
-    const btn    = document.querySelector('.chat-send-btn');
-    input.value  = '';
-    btn.disabled = true;
-
-    try {
-        await db.ref('chat/messages').push({
-            author: currentNickname,
-            text,
-            ts:   Date.now(),
-            type: 'text'
-        });
-    } catch(e) {
-        console.error('Ошибка отправки:', e);
-        input.value = text; // вернуть текст при ошибке
-    }
-
-    btn.disabled = false;
-    input.focus();
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // ИНИЦИАЛИЗАЦИЯ
 // ═══════════════════════════════════════════════════════════════════════════════
 
 buildLeaderboard();
-initNicknameModal();
