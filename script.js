@@ -1,4 +1,4 @@
-// ТВОИ ДРУЗЬЯ (можно добавлять прямо здесь)
+﻿// ТВОИ ДРУЗЬЯ (можно добавлять прямо здесь)
 let friends = ['just_Cone', 'MaxMas', 'aledmap2', 'Jcoin'];
 
 // Сохраняем список в localStorage, чтобы он не пропадал при перезагрузке
@@ -15,9 +15,9 @@ let allMessages  = [];     // массив сообщений чата
 // Канал для синхронизации вкладок
 const chatChannel = new BroadcastChannel('chess_friends_chat');
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 // ВКЛАДКИ
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 
 function switchTab(tabName) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -37,9 +37,9 @@ function switchTab(tabName) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 // ЧАТ И АВТОРИЗАЦИЯ
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 
 // Инициализация (запуск) после старта страницы
 window.addEventListener('load', () => {
@@ -214,9 +214,9 @@ function sendMessage() {
     chatChannel.postMessage({ type: 'new_message', data: newMessage });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 // РЕЙТИНГ
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 
 async function getPlayerData(username) {
     try {
@@ -258,13 +258,11 @@ async function buildLeaderboard() {
 
         let placeClass = '';
         let placeMedal = '';
-
-        if      (index === 0) { placeClass = 'gold';   placeMedal = '🥇'; }
-        else if (index === 1) { placeClass = 'silver'; placeMedal = '🥈'; }
-        else if (index === 2) { placeClass = 'bronze'; placeMedal = '🥉'; }
+        
+        // Убираем медали, используем просто индексацию
 
         row.innerHTML = `
-            <td><span class="place ${placeClass}">${placeMedal} #${index + 1}</span></td>
+            <td><span class="place ${placeClass}">#${index + 1}</span></td>
             <td>
                 <div class="player-info">
                     <span class="status-indicator ${player.online ? 'online' : 'offline'}"></span>
@@ -294,15 +292,8 @@ function sortTable(mode) {
     playersData.forEach((player, index) => {
         const row = document.createElement('tr');
 
-        let placeClass = '';
-        let placeMedal = '';
-
-        if      (index === 0) { placeClass = 'gold';   placeMedal = '🥇'; }
-        else if (index === 1) { placeClass = 'silver'; placeMedal = '🥈'; }
-        else if (index === 2) { placeClass = 'bronze'; placeMedal = '🥉'; }
-
         row.innerHTML = `
-            <td><span class="place ${placeClass}">${placeMedal} #${index + 1}</span></td>
+            <td><span class="place">#${index + 1}</span></td>
             <td>
                 <div class="player-info">
                     <span class="status-indicator ${player.online ? 'online' : 'offline'}"></span>
@@ -353,11 +344,11 @@ function addPlayer() {
     buildLeaderboard();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 // ИСТОРИЯ ПАРТИЙ
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 
-// Парсинг NDJSON: каждая строка — отдельный JSON-объект
+// Парсинг NDJSON: каждая строка  отдельный JSON-объект
 function parseNDJSON(text) {
     return text
         .trim()
@@ -370,12 +361,12 @@ function parseNDJSON(text) {
 // Перевод режима игры на русский
 function translateSpeed(speed) {
     const map = {
-        ultraBullet:    '⚡ Ультрапуля',
-        bullet:         '⚡ Пуля',
-        blitz:          '🔥 Блиц',
-        rapid:          '⏱️ Рапид',
-        classical:      '♟️ Классика',
-        correspondence: '✉️ Переписка'
+        ultraBullet:    'Ультрапуля',
+        bullet:         'Пуля',
+        blitz:          'Блиц',
+        rapid:          'Рапид',
+        classical:      'Классика',
+        correspondence: 'Переписка'
     };
     return map[speed] || speed;
 }
@@ -414,7 +405,7 @@ async function loadGamesHistory() {
     container.innerHTML = `
         <div class="games-loading-state">
             <div class="spinner"></div>
-            <p>Загружаем партии для ${friends.length} игроков…</p>
+            <p>Загружаем партии для ${friends.length} игроков</p>
         </div>
     `;
 
@@ -451,7 +442,7 @@ async function loadGamesHistory() {
     } catch (e) {
         container.innerHTML = `
             <div class="games-error">
-                ⚠️ Ошибка загрузки данных.<br>
+                Ошибка загрузки данных.<br>
                 Проверьте подключение к интернету и попробуйте снова.
             </div>
         `;
@@ -465,7 +456,6 @@ function renderGames(games) {
     if (games.length === 0) {
         container.innerHTML = `
             <div class="games-empty">
-                <span class="empty-icon">♟️</span>
                 Партий между вами пока нет. Сыграйте первую!
             </div>
         `;
@@ -486,43 +476,45 @@ function renderGames(games) {
         const whiteClass = winner === 'white' ? 'game-player winner' : 'game-player';
         const blackClass = winner === 'black' ? 'game-player winner' : 'game-player';
 
-        const whiteCheck = winner === 'white' ? '<span class="winner-mark"> ✓</span>' : '';
-        const blackCheck = winner === 'black' ? '<span class="winner-mark"> ✓</span>' : '';
+        // Иконки победы - тут просто пустой span для отступа или можно добавить галочку без эмодзи,
+        // но в "строгом" стиле галочки допустимы, если они монохромные.
+        // Я использую текстовый символ галочки (check mark), он выглядит строго.
+        const whiteCheck = winner === 'white' ? '<span class="winner-mark">\u2713</span>' : '';
+        const blackCheck = winner === 'black' ? '<span class="winner-mark">\u2713</span>' : '';
         const drawBadge  = isDraw              ? '<span class="game-draw-badge">Ничья</span>' : '';
 
         return `
             <div class="game-card ${cardClass}">
                 <div class="game-meta">
-                    <span class="game-date">📅 ${formatDate(game.createdAt)}</span>
+                    <span class="game-date"> ${formatDate(game.createdAt)}</span>
                     <span class="game-mode">${translateSpeed(game.speed)}</span>
                 </div>
                 <div class="game-players">
                     <div class="${whiteClass}">
-                        <span class="piece-icon">♔</span>
                         <span class="player-name">${whiteName}</span>${whiteCheck}
                     </div>
                     <span class="game-vs">vs</span>
                     <div class="${blackClass}">
-                        <span class="piece-icon">♚</span>
                         <span class="player-name">${blackName}</span>${blackCheck}
                     </div>
                     ${drawBadge}
                 </div>
-                <a href="https://lichess.org/${game.id}" target="_blank" class="watch-btn">👁️ Смотреть</a>
+                <a href="https://lichess.org/${game.id}" target="_blank" class="watch-btn">Смотреть</a>
             </div>
         `;
     }).join('');
 
     container.innerHTML = `
-        <p style="color:#a0a0a0; margin-bottom:16px;">
-            Найдено партий: <strong style="color:#d59120">${games.length}</strong>
+        <p style="color:#95a5a6; margin-bottom:16px;">
+            Найдено партий: <strong style="color:#00b894">${games.length}</strong>
         </p>
         <div class="games-container">${cards}</div>
     `;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 // ИНИЦИАЛИЗАЦИЯ
-// ═══════════════════════════════════════════════════════════════════════════════
+// 
 
 buildLeaderboard();
+

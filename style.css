@@ -1,718 +1,500 @@
+﻿/* 
+   STRICT DARK STYLE FOR CHESS FRIENDS 
+   - No gradients
+   - No emojis
+   - Clean, flat, dark
+   - Font: Consolas / Roboto 
+   - Accent: #00b894 (Green)
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
 * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #1a1816 0%, #2b2725 100%);
-    color: #ffffff;
-    min-height: 100vh;
-    padding: 20px;
+    background-color: #1a1c20;
+    color: #dfe6e9;
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    overflow: hidden; /* Fix scroll */
 }
 
-.container {
+/* --- LAYOUT --- */
+
+.app-container {
+    width: 100%;
     max-width: 900px;
-    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    background: #2d3436;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
 
-h1 {
-    text-align: center;
-    color: #d59120;
-    font-size: 2.5rem;
-    margin-bottom: 10px;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+header.app-header {
+    background: #202327;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 2px solid #00b894;
 }
 
-p {
-    text-align: center;
-    color: #a0a0a0;
-    margin-bottom: 20px;
+.app-logo {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #fff;
 }
 
-.controls {
-    text-align: center;
-    margin-bottom: 20px;
+.app-logo .highlight {
+    color: #00b894;
 }
 
-.refresh-btn {
-    background-color: #3893E8;
-    color: white;
+.main-nav {
+    display: flex;
+    gap: 20px;
+    height: 100%;
+}
+
+.tab-btn {
+    background: transparent;
     border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
+    color: #b2bec3;
+    font-weight: 500;
+    font-size: 13px;
     cursor: pointer;
-    font-size: 1rem;
-    transition: background-color 0.3s;
+    text-transform: uppercase;
+    height: 100%;
+    padding: 0 10px;
+    border-bottom: 3px solid transparent;
+    transition: color 0.2s, border-bottom 0.2s;
 }
 
-.refresh-btn:hover {
-    background-color: #2875c7;
+.tab-btn:hover {
+    color: #fff;
 }
 
-.leaderboard {
+.tab-btn.active {
+    color: #00b894;
+    border-bottom: 3px solid #00b894;
+}
+
+main {
+    flex: 1;
+    overflow-y: auto; /* Scrollable content */
+    background: #2d3436;
+    padding: 20px;
+    position: relative;
+}
+
+/* --- TABS --- */
+.tab-content {
+    display: none;
+    height: 100%;
+    flex-direction: column;
+}
+
+.tab-content.active {
+    display: flex;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- LEADERBOARD --- */
+
+.leaderboard-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.sort-btn {
+    background: #202327;
+    border: 1px solid #454d50;
+    color: #b2bec3;
+    padding: 8px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: bold;
+    flex: 1;
+    transition: all 0.2s;
+}
+
+.sort-btn:hover {
+    background: #353b3d;
+    color: #fff;
+}
+
+.sort-btn.active {
+    background: #00b894;
+    color: #fff;
+    border-color: #00b894;
+}
+
+.leaderboard-table {
     width: 100%;
     border-collapse: collapse;
-    background-color: #262421;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    font-size: 14px;
 }
 
-.leaderboard th,
-.leaderboard td {
-    padding: 16px;
+.leaderboard-table th {
     text-align: left;
-    border-bottom: 1px solid #3a3732;
-}
-
-.leaderboard th {
-    background-color: #1e1c1a;
-    color: #d59120;
-    font-weight: bold;
-    font-size: 1rem;
+    background: #202327;
+    padding: 12px;
+    font-weight: 500;
+    color: #636e72;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #454d50;
 }
 
-.leaderboard th.sortable {
-    cursor: pointer;
-    user-select: none;
-    transition: color 0.2s;
+.leaderboard-table td {
+    padding: 12px;
+    border-bottom: 1px solid #353b3d;
+    vertical-align: middle;
 }
 
-.leaderboard th.sortable:hover {
-    color: #ffa940;
+.leaderboard-table tr:hover td {
+    background: #353b3d;
 }
 
-.leaderboard tr:last-child td {
-    border-bottom: none;
-}
-
-.leaderboard tbody tr {
-    transition: background-color 0.2s;
-}
-
-.leaderboard tbody tr:hover {
-    background-color: #2d2a27;
+.place {
+    font-weight: 700;
+    color: #636e72;
+    font-family: 'Consolas', monospace;
 }
 
 .player-info {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .status-indicator {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    display: inline-block;
+    background: #636e72;
 }
 
 .status-indicator.online {
-    background-color: #66dd66;
-    box-shadow: 0 0 6px #66dd66;
-}
-
-.status-indicator.offline {
-    background-color: #666666;
+    background: #00b894;
+    box-shadow: 0 0 5px rgba(0, 184, 148, 0.5);
 }
 
 .username {
-    font-weight: bold;
+    color: #dfe6e9;
     text-decoration: none;
-    color: #ffffff;
-    transition: color 0.2s;
+    font-weight: 500;
 }
 
 .username:hover {
-    color: #d59120;
+    color: #00b894;
 }
 
-.place {
-    font-size: 1.3rem;
-    font-weight: bold;
-}
-
-.place.gold {
-    color: #FFD700;
-}
-
-.place.silver {
-    color: #C0C0C0;
-}
-
-.place.bronze {
-    color: #CD7F32;
-}
-
-.rating {
-    font-weight: 600;
-    color: #e0e0e0;
-}
-
-.loading {
-    text-align: center;
-    color: #a0a0a0;
-    font-style: italic;
-}
-
-.add-player {
-    margin-top: 40px;
-    background-color: #262421;
-    padding: 20px;
-    border-radius: 12px;
-    text-align: center;
-}
-
-.add-player h3 {
-    color: #d59120;
-    margin-bottom: 15px;
-}
-
-.add-player input {
-    padding: 10px;
-    border: 2px solid #3a3732;
-    border-radius: 6px;
-    background-color: #1e1c1a;
-    color: white;
-    font-size: 1rem;
-    width: 250px;
-    margin-right: 10px;
-}
-
-.add-player input:focus {
-    outline: none;
-    border-color: #d59120;
-}
-
-.add-player button {
-    padding: 10px 20px;
-    background-color: #d59120;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: bold;
-    transition: background-color 0.3s;
-}
-
-.add-player button:hover {
-    background-color: #b87818;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   ВКЛАДКИ
-   ═══════════════════════════════════════════════════════════════ */
-
-.tabs {
+.add-player-section {
+    margin-top: 20px;
     display: flex;
-    gap: 4px;
-    margin-bottom: 24px;
-    background-color: #1e1c1a;
-    padding: 6px;
-    border-radius: 10px;
+    gap: 10px;
 }
 
-.tab-btn {
+#new-username {
     flex: 1;
-    padding: 12px 20px;
-    background: transparent;
-    color: #a0a0a0;
+    background: #1a1c20;
+    border: 1px solid #454d50;
+    padding: 10px;
+    color: #fff;
+    outline: none;
+}
+
+#new-username:focus {
+    border-color: #00b894;
+}
+
+.add-btn {
+    background: #00b894;
     border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1rem;
+    color: #fff;
+    padding: 0 20px;
     font-weight: bold;
-    transition: all 0.25s;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-size: 12px;
 }
 
-.tab-btn:hover {
-    background-color: #2d2a27;
-    color: #d59120;
+.add-btn:hover {
+    background: #00a382;
 }
 
-.tab-btn.active {
-    background-color: #d59120;
-    color: #1a1816;
+/* --- CHAT --- */
+
+.chat-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #202327;
+    border: 1px solid #353b3d;
 }
 
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   ИСТОРИЯ ПАРТИЙ — КАРТОЧКИ
-   ═══════════════════════════════════════════════════════════════ */
-
-.games-container {
+.chat-window {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-top: 10px;
+}
+
+.message {
+    padding: 8px 12px;
+    background: #2d3436;
+    max-width: 80%;
+    font-size: 13px;
+    line-height: 1.4;
+    border-left: 3px solid #636e72;
+}
+
+.message.mine {
+    align-self: flex-end;
+    background: #2d3436;
+    border-left: none;
+    border-right: 3px solid #00b894;
+    text-align: right;
+}
+
+.message-meta {
+    font-size: 10px;
+    color: #636e72;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    display: flex;
+    gap: 8px;
+}
+
+.mine .message-meta {
+    justify-content: flex-end;
+}
+
+.chat-controls {
+    display: flex;
+    padding: 10px;
+    background: #1a1c20;
+    border-top: 1px solid #353b3d;
+}
+
+#chat-input {
+    flex: 1;
+    background: #2d3436;
+    border: 1px solid #454d50;
+    color: #fff;
+    padding: 10px;
+    outline: none;
+}
+
+#chat-send-btn {
+    background: #00b894;
+    color: #fff;
+    border: none;
+    padding: 0 15px;
+    font-weight: bold;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* --- HISTORY --- */
+
+.games-loading-state, .games-empty {
+    text-align: center;
+    color: #636e72;
+    margin-top: 50px;
+}
+
+.games-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
 }
 
 .game-card {
-    background-color: #262421;
-    border-radius: 10px;
-    padding: 16px 20px;
-    display: grid;
-    grid-template-columns: 148px 1fr auto;
-    align-items: center;
-    gap: 16px;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    transition: background-color 0.2s;
-}
-
-/* Победа белых — подсветка слева */
-.game-card.white-wins {
-    border-left-color: #c8a96e;
-    background: linear-gradient(90deg, rgba(200, 169, 110, 0.08) 0%, #262421 38%);
-}
-
-/* Победа чёрных — подсветка справа */
-.game-card.black-wins {
-    border-right-color: #8b7fcb;
-    background: linear-gradient(270deg, rgba(139, 127, 203, 0.08) 0%, #262421 38%);
-}
-
-/* Ничья — нейтральная левая полоска */
-.game-card.draw {
-    border-left-color: #555;
+    background: #202327;
+    border: 1px solid #353b3d;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: transform 0.2s;
 }
 
 .game-card:hover {
-    background-color: #2d2a27;
+    transform: translateY(-2px);
+    border-color: #00b894;
 }
+
+.game-card.white-wins { border-left: 3px solid #dfe6e9; }
+.game-card.black-wins { border-left: 3px solid #2d3436; } /* darker gray */
+.game-card.draw       { border-left: 3px solid #636e72; }
 
 .game-meta {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.game-date {
-    font-size: 0.78rem;
-    color: #a0a0a0;
-    white-space: nowrap;
-}
-
-.game-mode {
-    display: inline-block;
-    font-size: 0.78rem;
-    font-weight: bold;
-    padding: 3px 10px;
-    border-radius: 20px;
-    background-color: #1e1c1a;
-    color: #d59120;
-    border: 1px solid #3a3732;
-    width: fit-content;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #636e72;
+    text-transform: uppercase;
+    font-weight: 700;
 }
 
 .game-players {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    font-size: 14px;
 }
 
 .game-player {
     display: flex;
     align-items: center;
     gap: 5px;
-    font-weight: 600;
-    font-size: 0.95rem;
 }
 
-.game-player .piece-icon {
-    font-size: 1.1rem;
-    opacity: 0.65;
-}
-
-.game-player.winner .player-name {
-    color: #66dd66;
-}
-
-.game-player .player-name {
-    color: #e0e0e0;
-}
-
-.winner-mark {
-    color: #66dd66;
-    font-weight: bold;
-    font-size: 1rem;
+.game-player.winner {
+    color: #00b894;
+    font-weight: 700;
 }
 
 .game-vs {
-    color: #555;
-    font-size: 0.85rem;
-    flex-shrink: 0;
-}
-
-.game-draw-badge {
-    font-size: 0.73rem;
-    color: #a0a0a0;
-    background: #333;
-    padding: 2px 8px;
-    border-radius: 10px;
+    color: #454d50;
+    font-size: 10px;
 }
 
 .watch-btn {
-    display: inline-block;
-    padding: 8px 14px;
-    background-color: #3893E8;
-    color: white;
+    margin-top: 5px;
+    display: block;
+    text-align: center;
+    background: #2d3436;
+    color: #b2bec3;
     text-decoration: none;
-    border-radius: 6px;
-    font-size: 0.82rem;
-    font-weight: bold;
-    white-space: nowrap;
-    transition: background-color 0.2s;
+    font-size: 11px;
+    padding: 6px;
+    text-transform: uppercase;
+    border: 1px solid #353b3d;
+    transition: all 0.2s;
 }
 
 .watch-btn:hover {
-    background-color: #2875c7;
+    background: #353b3d;
+    color: #fff;
 }
 
-/* Пустая история / ошибка / загрузка */
-.games-empty {
-    text-align: center;
-    padding: 60px 20px;
-    color: #a0a0a0;
-    font-size: 1.05rem;
-}
-
-.games-empty .empty-icon {
-    font-size: 3rem;
-    display: block;
-    margin-bottom: 16px;
-}
-
-.games-error {
-    text-align: center;
-    padding: 36px 20px;
-    color: #e06060;
-    font-size: 1rem;
-    background-color: rgba(224, 96, 96, 0.05);
-    border-radius: 10px;
-    border: 1px solid rgba(224, 96, 96, 0.2);
-}
-
-.games-loading-state {
-    text-align: center;
-    padding: 50px 20px;
-    color: #a0a0a0;
-}
-
-.spinner {
-    display: inline-block;
-    width: 36px;
-    height: 36px;
-    border: 3px solid #3a3732;
-    border-top-color: #d59120;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-bottom: 14px;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   ЧАТ И МОДАЛЬНОЕ ОКНО
-   ═══════════════════════════════════════════════════════════════ */
-
-/* Основной контейнер чата */
-.chat-container {
-    background-color: #262421;
-    border-radius: 12px;
-    height: 600px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-    border: 1px solid #3a3732;
-}
-
-/* Область сообщений */
-.chat-messages {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    scrollbar-width: thin;
-    scrollbar-color: #3a3732 #262421;
-}
-
-/* Сообщение в чате */
-.message {
-    max-width: 80%;
-    padding: 10px 14px;
-    border-radius: 12px;
-    font-size: 0.95rem;
-    line-height: 1.4;
-    position: relative;
-    word-wrap: break-word;
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Мои сообщения (справа, оранжевые) */
-.message.mine {
-    align-self: flex-end;
-    background-color: #d59120;
-    color: #1a1816;
-    border-bottom-right-radius: 2px;
-}
-
-/* Чужие сообщения (слева, серые) */
-.message.theirs {
-    align-self: flex-start;
-    background-color: #3a3732;
-    color: #e0e0e0;
-    border-bottom-left-radius: 2px;
-}
-
-/* Мета-информация сообщения */
-.message-meta {
-    font-size: 0.75rem;
-    margin-bottom: 4px;
-    opacity: 0.8;
-    font-weight: bold;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.message.mine .message-meta {
-    color: #3a3228;
-}
-
-.message.theirs .message-meta {
-    color: #a0a0a0;
-}
-
-/* Панель ввода */
-.chat-controls {
-    padding: 16px;
-    background-color: #1e1c1a;
-    border-top: 1px solid #3a3732;
-    display: flex;
-    gap: 10px;
-}
-
-#chat-input {
-    flex: 1;
-    padding: 12px;
-    border-radius: 24px;
-    border: 1px solid #3a3732;
-    background-color: #262421;
-    color: white;
-    font-size: 1rem;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-#chat-input:focus {
-    border-color: #d59120;
-}
-
-#chat-send-btn {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    border: none;
-    background-color: #d59120;
-    color: white;
-    font-size: 1.2rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.1s, background-color 0.2s;
-}
-
-#chat-send-btn:hover {
-    background-color: #b87818;
-    transform: scale(1.05);
-}
-
-#chat-send-btn:active {
-    transform: scale(0.95);
-}
-
-/* Заглушка, если чат пуст */
-.chat-placeholder {
-    margin: auto;
-    color: #666;
-    font-style: italic;
-    text-align: center;
-}
-
-/* МОДАЛЬНОЕ ОКНО */
+/* --- MODAL --- */
 .modal-overlay {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
-    display: none; /* Скрыто по умолчанию */
-    align-items: center;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: none;
     justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
+    align-items: center;
+    z-index: 999;
 }
 
 .modal-overlay.active {
     display: flex;
 }
 
-.modal {
-    background-color: #262421;
+.modal-card {
+    background: #2d3436;
     padding: 30px;
-    border-radius: 16px;
-    width: 90%;
-    max-width: 400px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-    border: 1px solid #3a3732;
+    width: 300px;
     text-align: center;
+    border: 1px solid #454d50;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
-.modal h2 {
-    color: #d59120;
+.modal-card h2 {
     margin-bottom: 10px;
+    color: #fff;
 }
 
-.modal p {
-    color: #a0a0a0;
-    margin-bottom: 24px;
+.modal-card p {
+    font-size: 12px;
+    color: #b2bec3;
+    margin-bottom: 20px;
 }
 
-.login-options {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    text-align: left;
-}
-
-.login-options label {
-    font-size: 0.9rem;
-    color: #ccc;
-    margin-left: 4px;
-}
-
-.login-options select,
-.login-options input {
-    padding: 12px;
-    background-color: #1e1c1a;
-    border: 1px solid #3a3732;
-    border-radius: 8px;
-    color: white;
-    font-size: 1rem;
+.modal-card select, 
+.modal-card input {
     width: 100%;
-}
-
-.login-options select:focus,
-.login-options input:focus {
+    padding: 10px;
+    background: #1a1c20;
+    border: 1px solid #454d50;
+    color: #fff;
+    margin-bottom: 10px;
     outline: none;
-    border-color: #d59120;
 }
 
 .divider {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    color: #666;
-    margin: 10px 0;
+    font-size: 10px;
+    color: #636e72;
+    margin: 5px 0 15px;
+    text-transform: uppercase;
 }
 
-.divider::before,
-.divider::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid #3a3732;
-}
-
-.divider span {
-    padding: 0 10px;
-    font-size: 0.85rem;
-}
-
-.login-btn {
-    margin-top: 24px;
+.login-confirm-btn {
     width: 100%;
-    padding: 12px;
-    background-color: #66dd66; /* Зеленая кнопка как на Lichess 'Play' */
-    color: #1a1816;
-    font-weight: bold;
-    font-size: 1.1rem;
+    background: #00b894;
+    color: #fff;
     border: none;
-    border-radius: 8px;
+    padding: 10px;
+    font-weight: bold;
     cursor: pointer;
-    transition: filter 0.2s;
+    text-transform: uppercase;
 }
 
-.login-btn:hover {
-    filter: brightness(1.1);
+
+.winner-mark {
+    margin-left: 5px;
+    color: #00b894;
+    font-weight: bold;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   АДАПТИВ (дополнительно)
-   ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
-    /* ...existing media queries... */
-    .chat-container {
-        height: 80vh; /* На мобилке чат почти во весь экран */
-    }
+.game-draw-badge {
+    background: #636e72;
+    color: #dfe6e9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: bold;
 }
-    h1 {
-        font-size: 1.8rem;
-    }
 
-    .leaderboard th,
-    .leaderboard td {
-        padding: 12px 8px;
-        font-size: 0.9rem;
-    }
 
-    .add-player input {
-        width: 180px;
-        margin-bottom: 10px;
-    }
-
-    .tab-btn {
-        font-size: 0.85rem;
-        padding: 10px 8px;
-    }
-
-    .game-card {
-        grid-template-columns: 1fr;
-        gap: 10px;
-        /* На мобиле убираем правую рамку, оставляем только левую */
-        border-right: none !important;
-    }
-
-    .game-card.black-wins {
-        border-left-color: #8b7fcb;
-        background: linear-gradient(90deg, rgba(139, 127, 203, 0.08) 0%, #262421 38%);
-    }
-
-    .watch-btn {
-        width: 100%;
-        text-align: center;
-        display: block;
-    }
+/* Custom Scrollbar for Webkit */
+::-webkit-scrollbar {
+    width: 8px;
 }
+::-webkit-scrollbar-track {
+    background: #202327; 
+}
+::-webkit-scrollbar-thumb {
+    background: #454d50; 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #636e72; 
+}
+
