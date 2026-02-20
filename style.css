@@ -204,6 +204,233 @@ p {
     background-color: #b87818;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   ВКЛАДКИ
+   ═══════════════════════════════════════════════════════════════ */
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background-color: #1e1c1a;
+    padding: 6px;
+    border-radius: 10px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px 20px;
+    background: transparent;
+    color: #a0a0a0;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    transition: all 0.25s;
+}
+
+.tab-btn:hover {
+    background-color: #2d2a27;
+    color: #d59120;
+}
+
+.tab-btn.active {
+    background-color: #d59120;
+    color: #1a1816;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ИСТОРИЯ ПАРТИЙ — КАРТОЧКИ
+   ═══════════════════════════════════════════════════════════════ */
+
+.games-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.game-card {
+    background-color: #262421;
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: 148px 1fr auto;
+    align-items: center;
+    gap: 16px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    transition: background-color 0.2s;
+}
+
+/* Победа белых — подсветка слева */
+.game-card.white-wins {
+    border-left-color: #c8a96e;
+    background: linear-gradient(90deg, rgba(200, 169, 110, 0.08) 0%, #262421 38%);
+}
+
+/* Победа чёрных — подсветка справа */
+.game-card.black-wins {
+    border-right-color: #8b7fcb;
+    background: linear-gradient(270deg, rgba(139, 127, 203, 0.08) 0%, #262421 38%);
+}
+
+/* Ничья — нейтральная левая полоска */
+.game-card.draw {
+    border-left-color: #555;
+}
+
+.game-card:hover {
+    background-color: #2d2a27;
+}
+
+.game-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.game-date {
+    font-size: 0.78rem;
+    color: #a0a0a0;
+    white-space: nowrap;
+}
+
+.game-mode {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: bold;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background-color: #1e1c1a;
+    color: #d59120;
+    border: 1px solid #3a3732;
+    width: fit-content;
+}
+
+.game-players {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.game-player {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.game-player .piece-icon {
+    font-size: 1.1rem;
+    opacity: 0.65;
+}
+
+.game-player.winner .player-name {
+    color: #66dd66;
+}
+
+.game-player .player-name {
+    color: #e0e0e0;
+}
+
+.winner-mark {
+    color: #66dd66;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.game-vs {
+    color: #555;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.game-draw-badge {
+    font-size: 0.73rem;
+    color: #a0a0a0;
+    background: #333;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.watch-btn {
+    display: inline-block;
+    padding: 8px 14px;
+    background-color: #3893E8;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: bold;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+}
+
+.watch-btn:hover {
+    background-color: #2875c7;
+}
+
+/* Пустая история / ошибка / загрузка */
+.games-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #a0a0a0;
+    font-size: 1.05rem;
+}
+
+.games-empty .empty-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 16px;
+}
+
+.games-error {
+    text-align: center;
+    padding: 36px 20px;
+    color: #e06060;
+    font-size: 1rem;
+    background-color: rgba(224, 96, 96, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(224, 96, 96, 0.2);
+}
+
+.games-loading-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: #a0a0a0;
+}
+
+.spinner {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    border: 3px solid #3a3732;
+    border-top-color: #d59120;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 14px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   АДАПТИВ
+   ═══════════════════════════════════════════════════════════════ */
+
 @media (max-width: 768px) {
     h1 {
         font-size: 1.8rem;
@@ -218,5 +445,28 @@ p {
     .add-player input {
         width: 180px;
         margin-bottom: 10px;
+    }
+
+    .tab-btn {
+        font-size: 0.85rem;
+        padding: 10px 8px;
+    }
+
+    .game-card {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        /* На мобиле убираем правую рамку, оставляем только левую */
+        border-right: none !important;
+    }
+
+    .game-card.black-wins {
+        border-left-color: #8b7fcb;
+        background: linear-gradient(90deg, rgba(139, 127, 203, 0.08) 0%, #262421 38%);
+    }
+
+    .watch-btn {
+        width: 100%;
+        text-align: center;
+        display: block;
     }
 }

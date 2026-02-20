@@ -10,30 +10,49 @@
     <div class="container">
         <h1>🏆 Шахматный турнир друзей</h1>
         <p>Рейтинг обновляется автоматически с Lichess.org</p>
-        
-        <div class="controls">
-            <button onclick="location.reload()" class="refresh-btn">🔄 Обновить</button>
+
+        <!-- Вкладки -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="rating" onclick="switchTab('rating')">📊 Рейтинг</button>
+            <button class="tab-btn" data-tab="history" onclick="switchTab('history')">⚔️ История партий между нами</button>
         </div>
 
-        <table class="leaderboard">
-            <thead>
-                <tr>
-                    <th>Место</th>
-                    <th>Игрок</th>
-                    <th class="sortable" onclick="sortTable('rapid')">Рапид ⬍</th>
-                    <th class="sortable" onclick="sortTable('blitz')">Блиц ⬍</th>
-                    <th class="sortable" onclick="sortTable('bullet')">Пуля ⬍</th>
-                </tr>
-            </thead>
-            <tbody id="table-body">
-                <tr><td colspan="5" class="loading">Загрузка данных...</td></tr>
-            </tbody>
-        </table>
+        <!-- ── ВКЛАДКА: РЕЙТИНГ ── -->
+        <div id="tab-rating" class="tab-content active">
+            <div class="controls">
+                <button onclick="location.reload()" class="refresh-btn">🔄 Обновить</button>
+            </div>
 
-        <div class="add-player">
-            <h3>Добавить игрока</h3>
-            <input type="text" id="new-username" placeholder="Никнейм на Lichess">
-            <button onclick="addPlayer()">Добавить</button>
+            <table class="leaderboard">
+                <thead>
+                    <tr>
+                        <th>Место</th>
+                        <th>Игрок</th>
+                        <th class="sortable" onclick="sortTable('rapid')">Рапид ⬍</th>
+                        <th class="sortable" onclick="sortTable('blitz')">Блиц ⬍</th>
+                        <th class="sortable" onclick="sortTable('bullet')">Пуля ⬍</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr><td colspan="5" class="loading">Загрузка данных...</td></tr>
+                </tbody>
+            </table>
+
+            <div class="add-player">
+                <h3>Добавить игрока</h3>
+                <input type="text" id="new-username" placeholder="Никнейм на Lichess">
+                <button onclick="addPlayer()">Добавить</button>
+            </div>
+        </div>
+
+        <!-- ── ВКЛАДКА: ИСТОРИЯ ПАРТИЙ ── -->
+        <div id="tab-history" class="tab-content">
+            <div class="controls">
+                <button onclick="loadGamesHistory()" class="refresh-btn">🔄 Обновить историю</button>
+            </div>
+            <div id="games-list">
+                <p class="loading">Загрузка...</p>
+            </div>
         </div>
     </div>
 
