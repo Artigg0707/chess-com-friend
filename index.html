@@ -22,6 +22,12 @@
                 <button class="tab-btn" onclick="switchTab('activity')" data-tab="activity">
                      АКТИВНОСТЬ
                 </button>
+                <button class="tab-btn" onclick="switchTab('profile')" data-tab="profile">
+                     ПРОФИЛЬ
+                </button>
+                <button class="tab-btn" onclick="switchTab('shop')" data-tab="shop">
+                     МАГАЗИН
+                </button>
                 <button class="tab-btn" onclick="switchTab('chat')" data-tab="chat">
                      ЧАТ
                 </button>
@@ -86,7 +92,36 @@
                 </div>
             </section>
 
-            <!-- 4. CHAT -->
+            <!-- 3. PROFILE -->
+            <section id="tab-profile" class="tab-content">
+                <div class="profile-header-controls">
+                    <select id="profile-select" onchange="renderProfile(this.value)">
+                        <!-- Options filled by JS -->
+                    </select>
+                </div>
+                <div id="profile-card-container">
+                    <!-- Profile Card Rendered Here -->
+                </div>
+            </section>
+
+            <!-- 4. SHOP -->
+            <section id="tab-shop" class="tab-content">
+                <div class="shop-balance-display">
+                    Ваш баланс: <span id="shop-balance-amount">0</span> ♟️
+                </div>
+                <div class="shop-tabs">
+                    <button class="shop-tab-btn active" onclick="filterShop('badge')">Значки</button>
+                    <button class="shop-tab-btn" onclick="filterShop('animation')">Анимации</button>
+                    <button class="shop-tab-btn" onclick="filterShop('cardColor')">Цвета</button>
+                    <button class="shop-tab-btn" onclick="filterShop('frames')">Рамки</button>
+                    <button class="shop-tab-btn" onclick="filterShop('titles')">Титулы</button>
+                </div>
+                <div class="shop-grid" id="shop-container">
+                    <!-- Shop Items Rendered Here -->
+                </div>
+            </section>
+
+            <!-- 5. CHAT -->
             <section id="tab-chat" class="tab-content">
                 <div class="chat-wrapper">
                     <div class="chat-window" id="chat-messages">
@@ -99,6 +134,16 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <div id="inventory-modal" class="modal-overlay">
+        <div class="modal-card wide-modal">
+            <h2>Экипировка</h2>
+            <div id="inventory-container" class="inventory-grid">
+                <!-- Javascript will fill this -->
+            </div>
+            <button class="login-confirm-btn" onclick="document.getElementById('inventory-modal').classList.remove('active')">ЗАКРЫТЬ</button>
+        </div>
     </div>
 
     <!-- LOGIN MODAL (Simple overlay) -->
