@@ -1,28 +1,26 @@
-﻿// ТВОИ ДРУЗЬЯ (можно добавлять прямо здесь)
-let friends = ['just_Cone', 'MaxMas', 'aledmap2', 'Jcoin'];
+﻿// --- API BASE URL ---
+// Локально — запросы идут на тот же сервер (пустая строка)
+// На GitHub Pages — запросы идут на удалённый сервер fly.io
+// ↓↓↓ ЗАМЕНИ chess-friends-api на имя твоего fly-приложения ↓↓↓
+const REMOTE_API = 'https://chess-friends-api.fly.dev';
+const IS_LOCAL = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const API = IS_LOCAL ? '' : REMOTE_API;
 
-// Сохраняем список в localStorage, чтобы он не пропадал при перезагрузке
-if (localStorage.getItem('chessboardFriends')) {
-    friends = JSON.parse(localStorage.getItem('chessboardFriends'));
-}
-
-/* 
-   -----------------------------------------
-   GLOBAL STATE & CONSTANTS
-   -----------------------------------------
-*/
-let playersData = [];       // Данные для обычного рейтинга
+// --- GLOBAL STATE ---
+let friends = [];
+let playersData = [];       // Данные для обычного рейтинга (Lichess)
 let internalRatings = {};   // { "Username": { rating: 100, trend: "up/flat/down", diff: +5, games: 10 } }
 let gamesHistoryFull = [];  // Полная история партий для расчета ELO
 let currentTab = 'leaderboard';
 let ratingMode = 'lichess';  // 'lichess' or 'internal'
+let lastRecalc = null;       // Дата последнего пересчета
 
 const STARTING_ELO = 100;
 const K_FACTOR = 32;
 
 // Флаги загрузки
-let gamesLoaded = false;    // История для вкладки "История партий"
-let activityLoaded = false; // Данные для календаря
+let gamesLoaded = false;
+let activityLoaded = false;
 
 // Текущий пользователь чата
 let currentUser = null;
@@ -31,46 +29,63 @@ const chatChannel = new BroadcastChannel('chess_friends_chat');
 
 /* 
    -----------------------------------------
+   SERVER HELPERS (fetch wrappers)
+   -----------------------------------------
+*/
+async function apiFetch(url, options = {}) {
+    const res = await fetch(`${API}${url}`, {
+        headers: { 'Content-Type': 'application/json', ...options.headers },
+        ...options
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || 'Server error');
+    }
+    return res.json();
+}
+
+/* 
+   -----------------------------------------
    INITIALIZATION
    -----------------------------------------
 */
-window.addEventListener('load', () => {
-    // 1. Читаем ELO из localStorage
-    const savedRatings = localStorage.getItem('internalRatings');
-    if (savedRatings) {
-        internalRatings = JSON.parse(savedRatings);
-    } else {
-        // Если ничего нет, инициализируем
-        friends.forEach(f => {
-            internalRatings[f] = { 
-                rating: STARTING_ELO, 
-                trend: 'flat', 
-                diff: 0, 
-                games: 0 
-            };
-        });
-    }
-    
-    // Если список друзей изменился (добавили новых, а в ratings их нет) - добавляем
-    syncFriendsWithRatings();
+window.addEventListener('load', async () => {
+    try {
+        // 1. Загружаем друзей с сервера
+        friends = await apiFetch('/api/friends');
 
-    // 2. Если данных совсем нет (например, первый запуск), запустим пересчет
-    if (!savedRatings) {
-        recalculateInternalRatings();
-    } else {
-        // Иначе просто строим таблицу
-        buildLeaderboard(); 
+        // 2. Загружаем сохраненные рейтинги с сервера
+        const ratingsData = await apiFetch('/api/ratings');
+        internalRatings = ratingsData.ratings || {};
+        lastRecalc = ratingsData.lastRecalc;
+
+        // Синхронизируем (если есть друзья без рейтинга)
+        syncFriendsWithRatings();
+
+        // 3. Если рейтинги ещё ни разу не считались — пересчитаем
+        if (!lastRecalc || Object.keys(internalRatings).length === 0) {
+            await recalculateInternalRatings();
+        } else {
+            buildLeaderboard();
+        }
+    } catch (e) {
+        console.error('Init error:', e);
+        // Фоллбек на localStorage если сервер недоступен
+        friends = JSON.parse(localStorage.getItem('chessboardFriends') || '["just_Cone","MaxMas","aledmap2","Jcoin"]');
+        const saved = localStorage.getItem('internalRatings');
+        if (saved) internalRatings = JSON.parse(saved);
+        syncFriendsWithRatings();
+        buildLeaderboard();
     }
 
-    // 3. Чат
-    chatChannel.onmessage = (event) => {
+    // 4. Чат
+    chatChannel.onmessage = () => {
         loadMessages();
         renderMessages();
     };
 });
 
 function syncFriendsWithRatings() {
-    let changed = false;
     friends.forEach(f => {
         if (!internalRatings[f]) {
             internalRatings[f] = { 
@@ -79,12 +94,8 @@ function syncFriendsWithRatings() {
                 diff: 0, 
                 games: 0 
             };
-            changed = true;
         }
     });
-    if (changed) {
-        localStorage.setItem('internalRatings', JSON.stringify(internalRatings));
-    }
 }
 
 /* 
@@ -371,7 +382,13 @@ async function recalculateInternalRatings() {
             processGameForELO(game);
         });
 
-        // 6. Сохраняем
+        // 6. Сохраняем на сервер
+        await apiFetch('/api/ratings', {
+            method: 'POST',
+            body: JSON.stringify({ ratings: internalRatings })
+        });
+        
+        // Также localStorage как кэш
         localStorage.setItem('internalRatings', JSON.stringify(internalRatings));
         
         // 7. Обновляем UI
@@ -669,14 +686,24 @@ function renderGames(games) {
    ADD PLAYER
    -----------------------------------------
 */
-function addPlayer() {
+async function addPlayer() {
     const input = document.getElementById('new-username');
     const val = input.value.trim();
     if (!val) return;
-    if (friends.includes(val)) { alert('Уже есть'); return; }
+    if (friends.some(f => f.toLowerCase() === val.toLowerCase())) { alert('Уже есть'); return; }
     
-    friends.push(val);
-    localStorage.setItem('chessboardFriends', JSON.stringify(friends));
+    try {
+        // Отправляем на сервер
+        const result = await apiFetch('/api/friends', {
+            method: 'POST',
+            body: JSON.stringify({ username: val })
+        });
+        friends = result.friends;
+    } catch (e) {
+        // Фоллбек: добавляем локально
+        friends.push(val);
+        localStorage.setItem('chessboardFriends', JSON.stringify(friends));
+    }
     
     // Инициализируем рейтинг для нового
     syncFriendsWithRatings();
@@ -684,6 +711,7 @@ function addPlayer() {
     input.value = '';
     gamesLoaded = false; 
     activityLoaded = false;
+    playersData = []; // Сбросить кеш Lichess данных
     
     buildLeaderboard();
 }
@@ -693,12 +721,12 @@ function addPlayer() {
    CHAT (Basic)
    -----------------------------------------
 */
-function initChat() {
+async function initChat() {
     updateLoginSelect();
     const u = localStorage.getItem('chatUser');
     if (u) {
         currentUser = u;
-        loadMessages();
+        await loadMessages();
         enableChatInput();
         renderMessages();
     } else {
@@ -716,7 +744,7 @@ function updateLoginSelect() {
     });
 }
 
-function loginChat() {
+async function loginChat() {
     const sel = document.getElementById('login-select');
     const inp = document.getElementById('login-input');
     const user = inp.value.trim() || sel.value;
@@ -726,7 +754,7 @@ function loginChat() {
     currentUser = user;
     localStorage.setItem('chatUser', user);
     document.getElementById('login-modal').classList.remove('active');
-    loadMessages();
+    await loadMessages();
     enableChatInput();
     renderMessages();
 }
@@ -738,9 +766,14 @@ function enableChatInput() {
     inp.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
 }
 
-function loadMessages() {
-    const s = localStorage.getItem('chatMessages');
-    allMessages = s ? JSON.parse(s) : [];
+async function loadMessages() {
+    try {
+        allMessages = await apiFetch('/api/chat');
+    } catch (e) {
+        // Фоллбек localStorage
+        const s = localStorage.getItem('chatMessages');
+        allMessages = s ? JSON.parse(s) : [];
+    }
 }
 
 function renderMessages() {
@@ -764,14 +797,26 @@ function renderMessages() {
     box.scrollTop = box.scrollHeight;
 }
 
-function sendMessage() {
+async function sendMessage() {
     const inp = document.getElementById('chat-input');
     const txt = inp.value.trim();
     if (!txt) return;
 
-    const msg = { id: Date.now(), user: currentUser, text: txt, timestamp: Date.now() };
-    allMessages.push(msg);
-    localStorage.setItem('chatMessages', JSON.stringify(allMessages));
+    const msg = { user: currentUser, text: txt };
+
+    try {
+        const saved = await apiFetch('/api/chat', {
+            method: 'POST',
+            body: JSON.stringify(msg)
+        });
+        allMessages.push(saved);
+    } catch (e) {
+        // Фоллбек localStorage
+        const localMsg = { id: Date.now(), user: currentUser, text: txt, timestamp: Date.now() };
+        allMessages.push(localMsg);
+        localStorage.setItem('chatMessages', JSON.stringify(allMessages));
+    }
+
     inp.value = '';
     renderMessages();
     chatChannel.postMessage({ type: 'new_message' });

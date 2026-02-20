@@ -1,0 +1,7 @@
+node_modules
+.git
+data.json
+index.html
+script.js
+style.css
+*.md
