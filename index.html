@@ -29,11 +29,6 @@
         <main>
             <!-- 1. LEADERBOARD -->
             <section id="tab-leaderboard" class="tab-content active">
-                <div class="leaderboard-controls">
-                    <button class="sort-btn active" onclick="sortTable('rapid')">Rapid</button>
-                    <button class="sort-btn" onclick="sortTable('blitz')">Blitz</button>
-                    <button class="sort-btn" onclick="sortTable('bullet')">Bullet</button>
-                </div>
 
                 <div class="leaderboard-card">
                     <table class="leaderboard-table">
@@ -41,9 +36,9 @@
                             <tr>
                                 <th style="width: 60px;">#</th>
                                 <th>Игрок</th>
-                                <th style="width: 100px;">Rapid</th>
-                                <th style="width: 100px;">Blitz</th>
-                                <th style="width: 100px;">Bullet</th>
+                                <th style="width: 100px;" class="sortable active" onclick="sortTable('rapid')" data-sort="rapid">Rapid</th>
+                                <th style="width: 100px;" class="sortable" onclick="sortTable('blitz')" data-sort="blitz">Blitz</th>
+                                <th style="width: 100px;" class="sortable" onclick="sortTable('bullet')" data-sort="bullet">Bullet</th>
                             </tr>
                         </thead>
                         <tbody id="table-body">

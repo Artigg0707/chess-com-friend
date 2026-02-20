@@ -116,36 +116,6 @@ main {
 
 /* --- LEADERBOARD --- */
 
-.leaderboard-controls {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.sort-btn {
-    background: #202327;
-    border: 1px solid #454d50;
-    color: #b2bec3;
-    padding: 8px 16px;
-    cursor: pointer;
-    text-transform: uppercase;
-    font-size: 12px;
-    font-weight: bold;
-    flex: 1;
-    transition: all 0.2s;
-}
-
-.sort-btn:hover {
-    background: #353b3d;
-    color: #fff;
-}
-
-.sort-btn.active {
-    background: #00b894;
-    color: #fff;
-    border-color: #00b894;
-}
-
 .leaderboard-table {
     width: 100%;
     border-collapse: collapse;
@@ -162,6 +132,21 @@ main {
     font-size: 11px;
     letter-spacing: 1px;
     border-bottom: 1px solid #454d50;
+    transition: all 0.2s;
+}
+
+.leaderboard-table th.sortable {
+    cursor: pointer;
+}
+
+.leaderboard-table th.sortable:hover {
+    color: #fff;
+    background: #2d3436;
+}
+
+.leaderboard-table th.sortable.active {
+    color: #00b894;
+    border-bottom: 2px solid #00b894;
 }
 
 .leaderboard-table td {

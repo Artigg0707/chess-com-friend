@@ -284,6 +284,16 @@ function sortPlayersByRating(mode) {
 
 function sortTable(mode) {
     currentSort = mode;
+    
+    // Обновляем активный заголовок
+    document.querySelectorAll('th.sortable').forEach(th => {
+        if (th.dataset.sort === mode) {
+            th.classList.add('active');
+        } else {
+            th.classList.remove('active');
+        }
+    });
+
     sortPlayersByRating(mode);
 
     const tableBody = document.getElementById('table-body');
