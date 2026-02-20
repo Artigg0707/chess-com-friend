@@ -483,3 +483,213 @@ main {
     background: #636e72; 
 }
 
+
+
+/* --- RATING SWITCH --- */
+
+.rating-mode-switch {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.switch-label {
+    cursor: pointer;
+    font-size: 13px;
+    color: #b2bec3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s;
+}
+
+.switch-label:hover {
+    color: #fff;
+}
+
+.switch-label input[type="radio"] {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #636e72;
+    border-radius: 50%;
+    outline: none;
+    position: relative;
+    cursor: pointer;
+}
+
+.switch-label input[type="radio"]:checked {
+    border-color: #00b894;
+}
+
+.switch-label input[type="radio"]:checked::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: #00b894;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.switch-label span {
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+/* --- INTERNAL RATING TABLE DETAILS --- */
+
+.trend-icon {
+    margin-right: 5px;
+    font-size: 14px;
+}
+
+.trend-up { color: #00b894; }
+.trend-down { color: #d63031; }
+.trend-flat { color: #636e72; }
+
+.elo-diff {
+    font-size: 11px;
+    font-weight: normal;
+    margin-left: 5px;
+}
+
+.diff-positive { color: #00b894; }
+.diff-negative { color: #d63031; }
+.diff-neutral  { color: #636e72; }
+
+.table-loading-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(32, 35, 39, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+.leaderboard-footer-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.recalc-btn {
+    background: #2d3436;
+    border: 1px solid #00b894;
+    color: #00b894;
+    padding: 10px 15px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-size: 11px;
+    transition: all 0.2s;
+    height: 38px; /* Match input height roughly */
+}
+
+.recalc-btn:hover {
+    background: #00b894;
+    color: #fff;
+}
+
+/* --- ACTIVITY CALENDAR (Github Style) --- */
+
+.activity-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.player-activity-card {
+    background: #202327;
+    border: 1px solid #353b3d;
+    padding: 20px;
+}
+
+.activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.activity-username {
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.activity-stats {
+    font-size: 11px;
+    color: #636e72;
+    display: flex;
+    gap: 15px;
+}
+
+.activity-stats span strong {
+    color: #dfe6e9;
+}
+
+/* Grid is 7 rows (days of week) x ~13 columns (weeks) */
+.calendar-grid {
+    display: grid;
+    grid-template-rows: repeat(7, 10px);
+    grid-auto-flow: column; /* Fills columns first */
+    gap: 3px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+}
+
+.day-cell {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background-color: #2d3436; /* Default empty */
+    position: relative;
+    cursor: pointer;
+}
+
+/* Colors for levels */
+.level-0 { background-color: #2d3436; }
+.level-1 { background-color: #0e4429; } /* GitHub dark theme low */
+.level-2 { background-color: #006d32; }
+.level-3 { background-color: #26a641; }
+.level-4 { background-color: #39d353; }
+
+/* Tooltip */
+.day-cell:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    color: #fff;
+    padding: 5px 8px;
+    font-size: 10px;
+    white-space: nowrap;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 100;
+    margin-bottom: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+.spinner {
+    border: 3px solid rgba(255,255,255,0.1);
+    border-left-color: #00b894;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+

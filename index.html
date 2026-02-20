@@ -19,6 +19,9 @@
                 <button class="tab-btn" onclick="switchTab('history')" data-tab="history">
                      ИСТОРИЯ ПАРТИЙ
                 </button>
+                <button class="tab-btn" onclick="switchTab('activity')" data-tab="activity">
+                     АКТИВНОСТЬ
+                </button>
                 <button class="tab-btn" onclick="switchTab('chat')" data-tab="chat">
                      ЧАТ
                 </button>
@@ -29,17 +32,27 @@
         <main>
             <!-- 1. LEADERBOARD -->
             <section id="tab-leaderboard" class="tab-content active">
+                
+                <div class="rating-mode-switch">
+                    <label class="switch-label">
+                        <input type="radio" name="rating-mode" value="lichess" checked onchange="toggleRatingMode(this.value)">
+                        <span>Lichess Рейтинг</span>
+                    </label>
+                    <label class="switch-label">
+                        <input type="radio" name="rating-mode" value="internal" onchange="toggleRatingMode(this.value)">
+                        <span>Внутренний ELO</span>
+                    </label>
+                </div>
 
                 <div class="leaderboard-card">
-                    <table class="leaderboard-table">
+                    <div class="table-loading-overlay" id="rating-loading" style="display: none;">
+                        <div class="spinner"></div>
+                        <p id="rating-loading-text">Пересчет рейтинга...</p>
+                    </div>
+
+                    <table class="leaderboard-table" id="main-table">
                         <thead>
-                            <tr>
-                                <th style="width: 60px;">#</th>
-                                <th>Игрок</th>
-                                <th style="width: 100px;" class="sortable active" onclick="sortTable('rapid')" data-sort="rapid">Rapid</th>
-                                <th style="width: 100px;" class="sortable" onclick="sortTable('blitz')" data-sort="blitz">Blitz</th>
-                                <th style="width: 100px;" class="sortable" onclick="sortTable('bullet')" data-sort="bullet">Bullet</th>
-                            </tr>
+                            <!-- Headers will be injected by JS depending on mode -->
                         </thead>
                         <tbody id="table-body">
                             <!-- JS render -->
@@ -47,9 +60,15 @@
                     </table>
                 </div>
 
-                <div class="add-player-section">
-                    <input type="text" id="new-username" placeholder="Добавить игрока (lichess login)">
-                    <button class="add-btn" onclick="addPlayer()">ДОБАВИТЬ</button>
+                <div class="leaderboard-footer-actions">
+                    <div class="add-player-section">
+                        <input type="text" id="new-username" placeholder="Добавить (lichess login)">
+                        <button class="add-btn" onclick="addPlayer()">ДОБАВИТЬ</button>
+                    </div>
+                    
+                    <button id="recalc-btn" class="recalc-btn" onclick="recalculateInternalRatings()" style="display: none;">
+                         Пересчитать ELO
+                    </button>
                 </div>
             </section>
 
@@ -60,7 +79,14 @@
                 </div>
             </section>
 
-            <!-- 3. CHAT -->
+            <!-- 3. ACTIVITY (GitHub-style Calendar) -->
+            <section id="tab-activity" class="tab-content">
+                <div class="activity-container" id="activity-list">
+                    <div class="placeholder-text">Загрузка активности...</div>
+                </div>
+            </section>
+
+            <!-- 4. CHAT -->
             <section id="tab-chat" class="tab-content">
                 <div class="chat-wrapper">
                     <div class="chat-window" id="chat-messages">
