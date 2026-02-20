@@ -1,21 +1,3 @@
-// ═══════════════════════════════════════════════════════════════════════════════
-//  ⚙️  НАСТРОЙКА Firebase (чат работает только с настроенным Firebase)
-//
-//  1. Зайдите: https://console.firebase.google.com
-//  2. Создайте проект → добавьте веб-приложение (</>)
-//  3. Realtime Database → Создать базу данных → Тестовый режим
-//  4. Скопируйте firebaseConfig и вставьте значения ниже
-// ═══════════════════════════════════════════════════════════════════════════════
-const FIREBASE_CONFIG = {
-    apiKey:            "",
-    authDomain:        "",
-    databaseURL:       "",   // ← https://ВАШ_ПРОЕКТ-default-rtdb.XXX.firebasedatabase.app
-    projectId:         "",
-    storageBucket:     "",
-    messagingSenderId: "",
-    appId:             ""
-};
-
 // ТВОИ ДРУЗЬЯ (можно добавлять прямо здесь)
 let friends = ['just_Cone', 'MaxMas', 'aledmap2', 'Jcoin'];
 
@@ -27,6 +9,37 @@ if (localStorage.getItem('chessboardFriends')) {
 let playersData = [];
 let currentSort = 'rapid';
 let gamesLoaded  = false;  // флаг: история уже загружена?
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FIREBASE — вставьте свои данные из Firebase Console → Project Settings
+// Инструкция: console.firebase.google.com → New project → Realtime Database
+// ═══════════════════════════════════════════════════════════════════════════════
+const firebaseConfig = {
+    apiKey:            'PASTE_YOUR_API_KEY',
+    authDomain:        'PASTE_YOUR_PROJECT.firebaseapp.com',
+    databaseURL:       'https://PASTE_YOUR_PROJECT-default-rtdb.firebaseio.com/',
+    projectId:         'PASTE_YOUR_PROJECT_ID',
+    storageBucket:     'PASTE_YOUR_PROJECT.appspot.com',
+    messagingSenderId: 'PASTE_YOUR_SENDER_ID',
+    appId:             'PASTE_YOUR_APP_ID'
+};
+
+let db            = null;
+let chatListener  = null;
+let firebaseReady = false;
+let currentNickname = localStorage.getItem('chatNickname') || null;
+
+function initFirebase() {
+    if (firebaseConfig.apiKey === 'PASTE_YOUR_API_KEY') return; // конфиг не задан
+    try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        firebaseReady = true;
+    } catch(e) {
+        console.warn('Firebase init error:', e);
+    }
+}
+initFirebase();
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ВКЛАДКИ
@@ -43,12 +56,13 @@ function switchTab(tabName) {
     if (tabName === 'history' && !gamesLoaded) {
         loadGamesHistory();
     }
-    // Чат
+
+    // Чат: требуем ник, затем загружаем сообщения
     if (tabName === 'chat') {
-        if (!chatNickname) {
-            showNicknameModal();
-        } else if (!chatInitialized) {
-            initChat();
+        if (!currentNickname) {
+            document.getElementById('nickname-modal').classList.remove('hidden');
+        } else {
+            loadChat();
         }
     }
 }
@@ -347,202 +361,153 @@ function renderGames(games) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ЧАТ — НИК И FIREBASE
+// НИКНЕЙМ
 // ═══════════════════════════════════════════════════════════════════════════════
 
-let chatNickname     = localStorage.getItem('chatNickname') || '';
-let chatInitialized  = false;
-let db               = null;
-let selectedFriendNick = null;
+function initNicknameModal() {
+    // Заполняем кнопки из текущего списка друзей
+    const list = document.getElementById('modal-friends-list');
+    list.innerHTML = friends.map(f =>
+        `<button class="modal-friend-btn" onclick="pickFriendNick('${f}')">${f}</button>`
+    ).join('');
 
-// Генерация цвета по строке (детерминированно)
-function nickColor(nick) {
-    const palette = ['#d59120','#3893E8','#66dd66','#e06060','#c97bcc','#5bc0eb','#f7b731','#20bf6b'];
-    let h = 0;
-    for (let i = 0; i < nick.length; i++) h = nick.charCodeAt(i) + ((h << 5) - h);
-    return palette[Math.abs(h) % palette.length];
+    updateChatHeader();
+    // Модал открывается только при переходе на вкладку чата, не сразу
 }
 
-function formatChatTime(ts) {
-    return new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+function pickFriendNick(name) {
+    document.getElementById('nickname-input').value = name;
+    saveNickname();
 }
 
-function formatChatDate(ts) {
-    const d         = new Date(ts);
-    const today     = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-    if (d.toDateString() === today.toDateString())     return 'Сегодня';
-    if (d.toDateString() === yesterday.toDateString()) return 'Вчера';
-    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+function saveNickname() {
+    const input = document.getElementById('nickname-input');
+    const name  = input.value.trim();
+    if (!name) { input.focus(); return; }
+
+    currentNickname = name;
+    localStorage.setItem('chatNickname', name);
+    document.getElementById('nickname-modal').classList.add('hidden');
+    updateChatHeader();
+
+    // Если чат уже открыт — загружаем сообщения
+    if (document.getElementById('tab-chat').classList.contains('active')) {
+        loadChat();
+    }
 }
 
-function escapeHtml(text) {
-    return String(text)
+function changeNickname() {
+    currentNickname = null;
+    localStorage.removeItem('chatNickname');
+    document.getElementById('nickname-input').value = '';
+    document.getElementById('nickname-modal').classList.remove('hidden');
+    updateChatHeader();
+}
+
+function updateChatHeader() {
+    const label = document.getElementById('chat-user-label');
+    if (!label) return;
+    label.innerHTML = currentNickname
+        ? `Вы в чате как: <strong>${currentNickname}</strong>`
+        : '<span style="color:#a0a0a0">Никнейм не выбран</span>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ЧАТ
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function loadChat() {
+    const box = document.getElementById('chat-messages');
+
+    if (!firebaseReady) {
+        box.innerHTML = `
+            <div class="chat-firebase-error">
+                <span class="fire-icon">🔥</span>
+                <strong>Чат не настроен</strong><br><br>
+                Создайте бесплатный проект на
+                <a href="https://console.firebase.google.com/" target="_blank">Firebase</a>,
+                включите <strong>Realtime Database</strong> и вставьте конфиг
+                в начало файла <code>script.js</code>.
+            </div>
+        `;
+        return;
+    }
+
+    // Отключаем старый listener
+    if (chatListener) {
+        db.ref('chat/messages').off('value', chatListener);
+        chatListener = null;
+    }
+
+    box.innerHTML = '<div class="chat-placeholder">Загрузка сообщений...</div>';
+
+    chatListener = db.ref('chat/messages').limitToLast(120).on('value', snap => {
+        const data = snap.val();
+        renderChatMessages(data ? Object.values(data) : []);
+    });
+}
+
+function renderChatMessages(messages) {
+    const box = document.getElementById('chat-messages');
+
+    if (messages.length === 0) {
+        box.innerHTML = '<div class="chat-placeholder">Сообщений пока нет. Напишите первым! 👋</div>';
+        return;
+    }
+
+    // Сортируем по времени (старые сверху)
+    messages.sort((a, b) => a.ts - b.ts);
+
+    let html      = '';
+    let lastDate  = null;
+
+    for (const msg of messages) {
+        // Разделитель по дате
+        const dateStr = new Date(msg.ts).toLocaleDateString('ru-RU', {
+            day: 'numeric', month: 'long', year: 'numeric'
+        });
+        if (dateStr !== lastDate) {
+            html += `<div class="msg-date-divider">${dateStr}</div>`;
+            lastDate = dateStr;
+        }
+
+        if (msg.type === 'system') {
+            html += `<div class="msg-system">${escapeHtml(msg.text)}</div>`;
+            continue;
+        }
+
+        const isOwn     = msg.author === currentNickname;
+        const wrapClass = isOwn ? 'own' : 'other';
+        const time      = new Date(msg.ts).toLocaleTimeString('ru-RU', {
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        html += `
+            <div class="msg-wrapper ${wrapClass}">
+                ${!isOwn ? `<div class="msg-author">${escapeHtml(msg.author)}</div>` : ''}
+                <div class="msg-bubble">${escapeHtml(msg.text)}</div>
+                <div class="msg-time">${time}</div>
+            </div>
+        `;
+    }
+
+    box.innerHTML = html;
+    box.scrollTop = box.scrollHeight;
+}
+
+function escapeHtml(str) {
+    return String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
 }
 
-// ─── Модальное окно ───
+async function sendMessage() {
+    if (!firebaseReady) return;
 
-function showNicknameModal() {
-    selectedFriendNick = null;
-    const grid = document.getElementById('nick-friends-grid');
-    grid.innerHTML = '';
-
-    friends.forEach(f => {
-        const btn = document.createElement('button');
-        btn.className   = 'nick-friend-btn';
-        btn.textContent = f;
-        btn.onclick = () => {
-            document.querySelectorAll('.nick-friend-btn').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedFriendNick = f;
-            document.getElementById('nick-custom-input').value = '';
-        };
-        grid.appendChild(btn);
-    });
-
-    // Если ник уже был выбран ранее — предзаполняем поле
-    if (chatNickname) {
-        const match = [...grid.querySelectorAll('.nick-friend-btn')].find(b => b.textContent === chatNickname);
-        if (match) {
-            match.classList.add('selected');
-            selectedFriendNick = chatNickname;
-        } else {
-            document.getElementById('nick-custom-input').value = chatNickname;
-        }
-    }
-
-    document.getElementById('nickname-modal').style.display = 'flex';
-    setTimeout(() => document.getElementById('nick-custom-input').focus(), 80);
-}
-
-function confirmNickname() {
-    const customInput = document.getElementById('nick-custom-input').value.trim();
-    const nick = selectedFriendNick || customInput;
-
-    if (!nick) {
-        const inp = document.getElementById('nick-custom-input');
-        inp.focus();
-        inp.style.borderColor = '#e06060';
-        setTimeout(() => { inp.style.borderColor = ''; }, 1200);
-        return;
-    }
-
-    chatNickname = nick;
-    localStorage.setItem('chatNickname', nick);
-    document.getElementById('nickname-modal').style.display = 'none';
-    document.getElementById('chat-current-nick').textContent = nick;
-
-    if (!chatInitialized) initChat();
-}
-
-function changeNickname() {
-    selectedFriendNick = null;
-    showNicknameModal();
-}
-
-// ─── Firebase и чат ───
-
-function isFirebaseConfigured() {
-    return !!(FIREBASE_CONFIG.databaseURL && FIREBASE_CONFIG.databaseURL.trim().length > 10);
-}
-
-function initChat() {
-    chatInitialized = true;
-    const messagesEl = document.getElementById('chat-messages');
-
-    if (!isFirebaseConfigured()) {
-        messagesEl.innerHTML = `
-            <div class="chat-setup-msg">
-                <p>🔧 <strong style="color:#d59120">Чат не настроен</strong></p>
-                <p style="margin:12px 0 6px">Включить чат (бесплатно, ~5 мин):</p>
-                <ol style="text-align:left;line-height:2.1;padding-left:20px;font-size:0.87rem;color:#ccc;">
-                    <li>Зайдите на <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a></li>
-                    <li>Создайте проект &rarr; добавьте веб-приложение <strong>&lt;/&gt;</strong></li>
-                    <li><strong>Realtime Database</strong> &rarr; Создать базу &rarr; Тестовый режим</li>
-                    <li>Скопируйте <code style="background:#1e1c1a;padding:1px 6px;border-radius:4px;color:#d59120">firebaseConfig</code> в начало <code style="background:#1e1c1a;padding:1px 6px;border-radius:4px;color:#d59120">script.js</code></li>
-                </ol>
-            </div>
-        `;
-        return;
-    }
-
-    try {
-        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-        db = firebase.database();
-    } catch(e) {
-        messagesEl.innerHTML = `<div class="games-error">⚠️ Ошибка Firebase: ${escapeHtml(e.message)}</div>`;
-        return;
-    }
-
-    messagesEl.innerHTML = '<p class="loading" style="text-align:center;margin-top:20px">Подключение…</p>';
-
-    const ref = db.ref('chess-chat/messages').limitToLast(100);
-    ref.on('value', snapshot => {
-        const msgs = [];
-        snapshot.forEach(child => msgs.push({ id: child.key, ...child.val() }));
-        renderChatMessages(msgs);
-    }, err => {
-        messagesEl.innerHTML = `<div class="games-error">⚠️ Ошибка: ${escapeHtml(err.message)}</div>`;
-    });
-}
-
-function renderChatMessages(msgs) {
-    const el = document.getElementById('chat-messages');
-    if (!el) return;
-
-    // Запоминаем, был ли пользователь внизу до обновления
-    const wasAtBottom = el.scrollHeight === 0 || (el.scrollHeight - el.scrollTop - el.clientHeight < 80);
-
-    if (msgs.length === 0) {
-        el.innerHTML = `
-            <div class="games-empty">
-                <span class="empty-icon">💬</span>
-                Никто ещё не написал. Начните первым!
-            </div>
-        `;
-        return;
-    }
-
-    let html     = '';
-    let lastDate = '';
-
-    msgs.forEach(msg => {
-        if (!msg.author || !msg.text) return;
-
-        const dateStr = formatChatDate(msg.timestamp);
-        if (dateStr !== lastDate) {
-            html    += `<div class="chat-date-separator">${dateStr}</div>`;
-            lastDate = dateStr;
-        }
-
-        const isOwn  = msg.author === chatNickname;
-        const cls    = isOwn ? 'own' : 'other';
-        const color  = nickColor(msg.author);
-        const youTag = isOwn ? ' <span style="color:#555;font-weight:normal">(вы)</span>' : '';
-
-        html += `
-            <div class="chat-msg ${cls}">
-                <div class="chat-msg-meta">
-                    <span class="chat-msg-author" style="color:${color}">${escapeHtml(msg.author)}${youTag}</span>
-                    <span class="chat-msg-time">${formatChatTime(msg.timestamp)}</span>
-                </div>
-                <div class="chat-msg-bubble">${escapeHtml(msg.text)}</div>
-            </div>
-        `;
-    });
-
-    el.innerHTML = html;
-    if (wasAtBottom) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
-}
-
-function sendChatMessage() {
-    if (!chatNickname) {
-        showNicknameModal();
+    if (!currentNickname) {
+        document.getElementById('nickname-modal').classList.remove('hidden');
         return;
     }
 
@@ -550,18 +515,23 @@ function sendChatMessage() {
     const text  = input.value.trim();
     if (!text) return;
 
-    if (!db) {
-        if (!isFirebaseConfigured()) alert('Чат не настроен. Заполните FIREBASE_CONFIG в script.js');
-        return;
+    const btn    = document.querySelector('.chat-send-btn');
+    input.value  = '';
+    btn.disabled = true;
+
+    try {
+        await db.ref('chat/messages').push({
+            author: currentNickname,
+            text,
+            ts:   Date.now(),
+            type: 'text'
+        });
+    } catch(e) {
+        console.error('Ошибка отправки:', e);
+        input.value = text; // вернуть текст при ошибке
     }
 
-    db.ref('chess-chat/messages').push({
-        author:    chatNickname,
-        text,
-        timestamp: Date.now()
-    }).catch(err => console.error('Ошибка отправки:', err));
-
-    input.value = '';
+    btn.disabled = false;
     input.focus();
 }
 
@@ -570,9 +540,4 @@ function sendChatMessage() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 buildLeaderboard();
-
-// Отображаем сохранённый ник в шапке чата
-if (chatNickname) {
-    const nickEl = document.getElementById('chat-current-nick');
-    if (nickEl) nickEl.textContent = chatNickname;
-}
+initNicknameModal();

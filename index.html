@@ -15,7 +15,7 @@
         <div class="tabs">
             <button class="tab-btn active" data-tab="rating" onclick="switchTab('rating')">📊 Рейтинг</button>
             <button class="tab-btn" data-tab="history" onclick="switchTab('history')">⚔️ История партий между нами</button>
-            <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">💬 Чат</button>
+            <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">💬 Общий чат</button>
         </div>
 
         <!-- ── ВКЛАДКА: РЕЙТИНГ ── -->
@@ -58,43 +58,40 @@
 
         <!-- ── ВКЛАДКА: ЧАТ ── -->
         <div id="tab-chat" class="tab-content">
-            <div class="chat-wrapper">
-                <div class="chat-header">
-                    <span class="chat-title">💬 Общий чат</span>
-                    <button class="chat-nick-btn" onclick="changeNickname()">
-                        👤 <span id="chat-current-nick">—</span> <span class="chat-nick-edit">✏️</span>
-                    </button>
-                </div>
-                <div id="chat-messages" class="chat-messages"></div>
-                <div class="chat-input-area">
-                    <input type="text" id="chat-input" class="chat-input"
-                           placeholder="Написать сообщение…" maxlength="500"
-                           onkeydown="if(event.key==='Enter'&&!event.shiftKey){sendChatMessage();event.preventDefault();}">
-                    <button class="chat-send-btn" onclick="sendChatMessage()">➤</button>
-                </div>
+            <div class="chat-header">
+                <span id="chat-user-label"></span>
+                <button onclick="changeNickname()" class="change-nick-btn">✏️ Сменить ник</button>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+                <div class="chat-placeholder">Загрузка сообщений...</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Напишите сообщение..." maxlength="500"
+                       onkeydown="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()" class="chat-send-btn">➤</button>
             </div>
         </div>
     </div>
 
-    <!-- ── МОДАЛЬНОЕ ОКНО ВЫБОРА НИКА ── -->
-    <div id="nickname-modal" class="modal-overlay" style="display:none;">
+    <!-- ── МОДАЛ: ВЫБОР НИКНЕЙМА ── -->
+    <div id="nickname-modal" class="modal-overlay hidden">
         <div class="modal-box">
-            <div class="modal-chess-icon">♟</div>
-            <h2 class="modal-title">Добро пожаловать!</h2>
-            <p class="modal-subtitle">Выберите ваш ник для чата</p>
-            <div class="nick-section-label">Игроки из списка друзей:</div>
-            <div id="nick-friends-grid" class="nick-friends-grid"></div>
-            <div class="nick-divider"><span>или введите свой</span></div>
-            <div class="nick-custom-row">
-                <input type="text" id="nick-custom-input" placeholder="Ваш никнейм…"
-                       maxlength="20" onkeydown="if(event.key==='Enter')confirmNickname()">
-                <button class="nick-confirm-btn" onclick="confirmNickname()">Войти ➤</button>
+            <div class="modal-icon">♟️</div>
+            <h2>Кто ты?</h2>
+            <p class="modal-subtitle">Выбери свой никнейм, чтобы писать в чат</p>
+            <div id="modal-friends-list" class="modal-friends"></div>
+            <div class="modal-or"><span>или введи любой</span></div>
+            <div class="modal-input-row">
+                <input type="text" id="nickname-input" placeholder="Никнейм..." maxlength="30"
+                       onkeydown="if(event.key==='Enter') saveNickname()">
+                <button onclick="saveNickname()" class="modal-enter-btn">Войти →</button>
             </div>
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <!-- Firebase SDK (Realtime Database) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
