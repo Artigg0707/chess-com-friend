@@ -368,7 +368,7 @@ function renderGamesList() {
                 <span class="game-vs">vs</span>
                 <div class="${blackClass}">${bDisplay}</div>
             </div>
-            <a href="https://lichess.org/${game.id}" target="_blank" class="watch-btn" style="color:#b2bec3;">
+            <a href="https://lichess.org/${game.id}" target="_blank" class="watch-btn" title="Просмотр">
                 <i class="fa-solid fa-eye"></i>
             </a>
         `;
@@ -614,11 +614,11 @@ function renderProfile(username) {
                 <div class="stat-value">${stats.games}</div>
                 <div class="stat-label">Партий</div>
             </div>
-            <div class="stat-box" style="color: #00b894;">
+            <div class="stat-box stat-win">
                 <div class="stat-value">${stats.wins}</div>
                 <div class="stat-label">Побед</div>
             </div>
-            <div class="stat-box" style="color: #d63031;">
+            <div class="stat-box stat-loss">
                 <div class="stat-value">${stats.loss}</div>
                 <div class="stat-label">Поражений</div>
             </div>
