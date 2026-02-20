@@ -2,168 +2,254 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Chess Friends | Leaderboard</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Friend Leaderboard</title>
+    <link href="style.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <div class="app-container">
-        <!-- HEADER -->
-        <header class="app-header">
-            <h1 class="app-logo">CHESS<span class="highlight">FRIENDS</span></h1>
+<div class="app-container">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fa-solid fa-chess-knight"></i>
+            <span>ChessFriends</span>
+        </div>
+        
+        <nav class="nav-menu">
+            <button class="nav-btn active" data-tab="leaderboard">
+                <i class="fa-solid fa-trophy"></i> Рейтинг
+            </button>
+            <button class="nav-btn" data-tab="activity">
+                <i class="fa-solid fa-calendar-days"></i> Активность
+            </button>
+            <button class="nav-btn" data-tab="games">
+                <i class="fa-solid fa-chess-board"></i> Партии
+            </button>
+            <button class="nav-btn" data-tab="profile">
+                <i class="fa-solid fa-user"></i> Профиль
+            </button>
+            <button class="nav-btn shop-nav-btn" data-tab="shop">
+                <i class="fa-solid fa-shop"></i> Магазин
+            </button>
+             <button class="nav-btn" data-tab="admin">
+                <i class="fa-solid fa-gear"></i> Настройки
+            </button>
+        </nav>
+
+        <!-- Mini Profile -->
+        <div class="mini-profile" id="sidebar-mini-profile">
+            <div class="mini-profile-avatar">
+                <i class="fa-solid fa-user-circle"></i>
+            </div>
+            <div class="mini-profile-info">
+                <div class="mini-username" id="mini-username-display">Гость</div>
+                <div class="mini-balance"><span id="mini-balance-display">0</span> </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- Tab: Leaderboard -->
+        <section id="tab-leaderboard" class="tab-content active">
             
-            <nav class="main-nav">
-                <button class="tab-btn active" onclick="switchTab('leaderboard')" data-tab="leaderboard">
-                     РЕЙТИНГ
-                </button>
-                <button class="tab-btn" onclick="switchTab('history')" data-tab="history">
-                     ИСТОРИЯ ПАРТИЙ
-                </button>
-                <button class="tab-btn" onclick="switchTab('activity')" data-tab="activity">
-                     АКТИВНОСТЬ
-                </button>
-                <button class="tab-btn" onclick="switchTab('profile')" data-tab="profile">
-                     ПРОФИЛЬ
-                </button>
-                <button class="tab-btn" onclick="switchTab('shop')" data-tab="shop">
-                     МАГАЗИН
-                </button>
-                <button class="tab-btn" onclick="switchTab('chat')" data-tab="chat">
-                     ЧАТ
-                </button>
-            </nav>
-        </header>
+            <!-- Shop Banner -->
+            <div class="shop-banner">
+                <div class="shop-banner-content">
+                    <span class="shop-banner-text"> Твой баланс: <strong id="banner-balance">0</strong> </span>
+                    <button class="shop-banner-btn" id="banner-shop-btn">В магазин</button>
+                </div>
+            </div>
 
-        <!-- CONTENT -->
-        <main>
-            <!-- 1. LEADERBOARD -->
-            <section id="tab-leaderboard" class="tab-content active">
+            <header class="content-header">
+                <h1>Таблица лидеров</h1>
+                <div class="header-actions">
+                    <div class="last-update" id="last-update">Обновлено: никогда</div>
+                    <button id="refresh-btn" class="icon-btn" title="Обновить"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+            </header>
+
+            <!-- Rating Mode Switch -->
+            <div class="rating-mode-switch">
+                <label class="switch-label">
+                    <input type="radio" name="rating-mode" value="lichess" checked>
+                    <span>Lichess Rating</span>
+                </label>
+                <label class="switch-label">
+                    <input type="radio" name="rating-mode" value="internal">
+                    <span>Internal Rating</span>
+                </label>
+            </div>
+
+            <div class="table-container">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr id="table-head-row">
+                            <!-- Headers generated by JS -->
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Rows generated by JS -->
+                    </tbody>
+                </table>
+                <div id="loading-spinner" class="spinner" style="display:none;"></div>
                 
-                <div class="rating-mode-switch">
-                    <label class="switch-label">
-                        <input type="radio" name="rating-mode" value="lichess" checked onchange="toggleRatingMode(this.value)">
-                        <span>Lichess Рейтинг</span>
-                    </label>
-                    <label class="switch-label">
-                        <input type="radio" name="rating-mode" value="internal" onchange="toggleRatingMode(this.value)">
-                        <span>Внутренний ELO</span>
-                    </label>
-                </div>
-
-                <div class="leaderboard-card">
-                    <div class="table-loading-overlay" id="rating-loading" style="display: none;">
-                        <div class="spinner"></div>
-                        <p id="rating-loading-text">Пересчет рейтинга...</p>
-                    </div>
-
-                    <table class="leaderboard-table" id="main-table">
-                        <thead>
-                            <!-- Headers will be injected by JS depending on mode -->
-                        </thead>
-                        <tbody id="table-body">
-                            <!-- JS render -->
-                        </tbody>
-                    </table>
-                </div>
-
                 <div class="leaderboard-footer-actions">
-                    <div class="add-player-section">
-                        <input type="text" id="new-username" placeholder="Добавить (lichess login)">
-                        <button class="add-btn" onclick="addPlayer()">ДОБАВИТЬ</button>
-                    </div>
-                    
-                    <button id="recalc-btn" class="recalc-btn" onclick="recalculateInternalRatings()" style="display: none;">
-                         Пересчитать ELO
+                    <button id="recalc-internal-btn" class="recalc-btn" style="display:none;">
+                        <i class="fa-solid fa-calculator"></i> Пересчитать
                     </button>
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- 2. HISTORY -->
-            <section id="tab-history" class="tab-content">
-                <div class="history-container" id="games-list">
-                    <div class="placeholder-text">Загрузка истории...</div>
-                </div>
-            </section>
+        <!-- Tab: Activity -->
+        <section id="tab-activity" class="tab-content">
+            <header class="content-header">
+                <h1>Активность (90 дней)</h1>
+            </header>
+            <div id="activity-container" class="activity-container">
+                <!-- Activity Grids Generated by JS -->
+            </div>
+        </section>
 
-            <!-- 3. ACTIVITY (GitHub-style Calendar) -->
-            <section id="tab-activity" class="tab-content">
-                <div class="activity-container" id="activity-list">
-                    <div class="placeholder-text">Загрузка активности...</div>
-                </div>
-            </section>
-
-            <!-- 3. PROFILE -->
-            <section id="tab-profile" class="tab-content">
-                <div class="profile-header-controls">
-                    <select id="profile-select" onchange="renderProfile(this.value)">
-                        <!-- Options filled by JS -->
+        <!-- Tab: Games -->
+        <section id="tab-games" class="tab-content">
+            <header class="content-header">
+                <h1>История партий</h1>
+                <div class="filter-controls">
+                    <select id="games-filter-select">
+                        <option value="all">Все партии</option>
+                        <!-- Players populated by JS -->
                     </select>
                 </div>
-                <div id="profile-card-container">
-                    <!-- Profile Card Rendered Here -->
-                </div>
-            </section>
+            </header>
 
-            <!-- 4. SHOP -->
-            <section id="tab-shop" class="tab-content">
-                <div class="shop-balance-display">
-                    Ваш баланс: <span id="shop-balance-amount">0</span> ♟️
-                </div>
-                <div class="shop-tabs">
-                    <button class="shop-tab-btn active" onclick="filterShop('badge')">Значки</button>
-                    <button class="shop-tab-btn" onclick="filterShop('animation')">Анимации</button>
-                    <button class="shop-tab-btn" onclick="filterShop('cardColor')">Цвета</button>
-                    <button class="shop-tab-btn" onclick="filterShop('frames')">Рамки</button>
-                    <button class="shop-tab-btn" onclick="filterShop('titles')">Титулы</button>
-                </div>
-                <div class="shop-grid" id="shop-container">
-                    <!-- Shop Items Rendered Here -->
-                </div>
-            </section>
-
-            <!-- 5. CHAT -->
-            <section id="tab-chat" class="tab-content">
-                <div class="chat-wrapper">
-                    <div class="chat-window" id="chat-messages">
-                        <!-- Messages render -->
-                    </div>
-                    <div class="chat-controls">
-                        <input type="text" id="chat-input" placeholder="Напишите сообщение..." disabled>
-                        <button id="chat-send-btn" onclick="sendMessage()" disabled>ОТПРАВИТЬ</button>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <div id="inventory-modal" class="modal-overlay">
-        <div class="modal-card wide-modal">
-            <h2>Экипировка</h2>
-            <div id="inventory-container" class="inventory-grid">
-                <!-- Javascript will fill this -->
+            <div id="games-list" class="games-grid">
+                <!-- Games populated by JS -->
             </div>
-            <button class="login-confirm-btn" onclick="document.getElementById('inventory-modal').classList.remove('active')">ЗАКРЫТЬ</button>
-        </div>
-    </div>
+        </section>
 
-    <!-- LOGIN MODAL (Simple overlay) -->
-    <div id="login-modal" class="modal-overlay">
-        <div class="modal-card">
-            <h2>Вход в чат</h2>
-            <p>Выберите свой ник из списка или введите новый</p>
+        <!-- Tab: Profile -->
+        <section id="tab-profile" class="tab-content">
+            <header class="content-header">
+                <h1>Профиль игрока</h1>
+                <select id="profile-select-user" class="profile-selector">
+                    <!-- Options populated by JS -->
+                </select>
+            </header>
             
-            <select id="login-select">
-                <option value="" disabled selected>Кто вы?</option>
-            </select>
-            
-            <div class="divider">или</div>
-            
-            <input type="text" id="login-input" placeholder="Я...">
-            
-            <button class="login-confirm-btn" onclick="loginChat()">ВОЙТИ</button>
-        </div>
-    </div>
+            <div class="profile-layout">
+                <div class="profile-card-large" id="profile-card-container">
+                    <!-- Profile Content JS -->
+                </div>
 
-    <script src="script.js"></script>
+                <div class="profile-sidebar-right">
+                    <div class="inventory-section">
+                        <h2><i class="fa-solid fa-shirt"></i> Инвентарь</h2>
+                        <div id="inventory-container" class="inventory-container">
+                            <!-- Inventory populated by JS -->
+                        </div>
+                    </div>
+
+                    <div class="transaction-history">
+                        <h2><i class="fa-solid fa-clock-rotate-left"></i> История покупок</h2>
+                        <ul id="transaction-list" class="transaction-list">
+                            <!-- Transactions JS -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: Shop -->
+        <section id="tab-shop" class="tab-content">
+            <header class="content-header">
+                <h1>Магазин "Шахматная Лавка"</h1>
+                <div class="shop-balance-display">
+                    Ваш баланс: <span id="shop-user-balance">0</span> 
+                </div>
+            </header>
+            
+            <div class="shop-categories">
+                <button class="shop-cat-btn active" data-cat="all">Все</button>
+                <button class="shop-cat-btn" data-cat="badge">Значки</button>
+                <button class="shop-cat-btn" data-cat="effect">Эффекты</button>
+                <button class="shop-cat-btn" data-cat="color">Цвета</button>
+                <button class="shop-cat-btn" data-cat="title">Титулы</button>
+            </div>
+
+            <div id="shop-grid" class="shop-grid">
+                <!-- Shop Items JS -->
+            </div>
+        </section>
+
+        <!-- Tab: Admin / Settings -->
+        <section id="tab-admin" class="tab-content">
+            <header class="content-header">
+                <h1>Управление</h1>
+            </header>
+            
+            <div class="admin-panel">
+                <div class="add-friend-form">
+                    <input type="text" id="new-username" placeholder="Lichess Username">
+                    <button id="add-friend-btn" class="add-btn">Добавить</button>
+                </div>
+
+                <div class="friends-list-wrapper">
+                    <h3>Список друзей</h3>
+                    <ul id="friends-list" class="friends-list"></ul>
+                </div>
+                
+                 <div class="admin-danger-zone">
+                     <h3>Опасная зона</h3>
+                     <button id="reset-all-btn" style="background:#d63031; color:white; padding:8px 12px; border:none; cursor:pointer;">Сброс всех данных</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+    <!-- Chat Sidebar (Right) -->
+    <aside class="chat-sidebar">
+        <div class="chat-wrapper">
+            <div class="chat-header">
+                Чат
+            </div>
+            <div id="chat-window" class="chat-window">
+                <!-- Messages -->
+            </div>
+            <div class="chat-controls">
+                <input type="text" id="chat-input" placeholder="Сообщение...">
+                <button id="chat-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </aside>
+
+</div>
+
+<!-- Login Modal -->
+<div id="login-modal" class="modal-overlay active">
+    <div class="modal-card">
+        <h2>Кто ты?</h2>
+        <p>Выберите свой никнейм для доступа к экономике и чату</p>
+        <select id="login-select"></select>
+        <div class="divider">ИЛИ</div>
+        <input type="text" id="login-username" placeholder="Введите ник (если нет в списке)">
+        <button id="login-confirm" class="login-confirm-btn">Войти</button>
+    </div>
+</div>
+
+<div id="equipment-modal" class="modal-overlay">
+    <!-- Populated by JS -->
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
