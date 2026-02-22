@@ -82,7 +82,6 @@ const SHOP_ITEMS = [
 document.addEventListener('DOMContentLoaded', () => {
     initLogin();
     setupTabs();
-    setupAdmin();
     setupChat();
     
     // Default load
@@ -897,43 +896,6 @@ function loadActivityCalendar() {
 }
 
 
-// --- 7. ADMIN / CHAT UTILS ---
-
-function setupAdmin() {
-    const updateList = () => {
-        const ul = document.getElementById('friends-list');
-        if(!ul) return;
-        ul.innerHTML = '';
-        friends.forEach(f => {
-            const li = document.createElement('li');
-            li.innerHTML = `${f} <span style="cursor:pointer; color:#e74c3c; float:right;" onclick="removeFriend('${f}')">✕</span>`;
-            li.style.padding = "5px 0";
-            li.style.borderBottom = "1px solid #333";
-            ul.appendChild(li);
-        });
-    };
-
-    // Add Friend functionality removed from UI by user request.
-    // To add friends, edit the 'friends' array in script.js line 23.
-
-    window.removeFriend = function(name) {
-        if(confirm(`Удалить ${name}?`)) {
-            friends = friends.filter(f => f !== name);
-            localStorage.setItem(FRIENDS_KEY, JSON.stringify(friends));
-            updateList();
-        }
-    };
-    
-    document.getElementById('reset-all-btn').addEventListener('click', () => {
-         if(confirm("ВЫ УВЕРЕНЫ? Это удалит ВСЕ данные.")) {
-             localStorage.clear();
-             location.reload();
-         }
-    });
-
-    updateList();
-}
-
 function setupChat() {
     const win = document.getElementById('chat-window');
     const inp = document.getElementById('chat-input');
@@ -981,3 +943,38 @@ function setupChat() {
         }
     }, 2000);
 }
+
+// Admin/settings tab removed.
+
+// --- MOBILE CHAT LOGIC ---
+document.getElementById("mobile-chat-toggle").addEventListener("click", () => {
+    const chatSidebar = document.querySelector(".chat-sidebar");
+    const chatBtn = document.getElementById("mobile-chat-toggle");
+    
+    // Toggle Active State
+    const isActive = chatSidebar.classList.toggle("active");
+    
+    if (isActive) {
+        // Visual: Make this button active, others inactive
+        document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.remove("active"));
+        chatBtn.classList.add("active");
+    } else {
+        // Closed chat - maybe restore dashboard or just remove active from self
+        chatBtn.classList.remove("active");
+        // Optionally restore the first tab active state if needed, 
+        // or let user click another tab to go back.
+        // For better UX, let"s switch back to "leaderboard" (default) or just leave it.
+        // Let"s simulate click on "leaderboard" to return to main view clearly?
+        // Or just leave it blank? Let"s switch to first tab.
+        switchTab("leaderboard");
+    }
+});
+
+// Hide chat when clicking any other nav button
+document.querySelectorAll(".nav-btn:not(#mobile-chat-toggle)").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelector(".chat-sidebar").classList.remove("active");
+        document.getElementById("mobile-chat-toggle").classList.remove("active");
+    });
+});
+

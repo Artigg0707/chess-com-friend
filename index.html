@@ -31,9 +31,6 @@
             <button class="nav-btn" data-tab="profile">
                 <i class="fa-solid fa-user"></i> Профиль
             </button>
-             <button class="nav-btn" data-tab="admin">
-                <i class="fa-solid fa-gear"></i> Настройки
-            </button>
         </nav>
 
 
@@ -63,7 +60,7 @@
                 </div>
             </header>
 
-            <div class="rating-mode-switch" style="display:none;">
+            <div class="rating-mode-switch">
                 <label class="switch-label">
                     <input type="radio" name="rating-mode" value="lichess" checked>
                     <span>Lichess Rating</span>
@@ -124,27 +121,6 @@
             <div class="profile-layout scrollable-area">
                 <div class="profile-card-large" id="profile-card-container">
                     <!-- Profile Content JS -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Tab: Admin / Settings -->
-        <section id="tab-admin" class="tab-content">
-            <header class="content-header">
-                <h1>Управление</h1>
-            </header>
-            
-            <div class="admin-panel scrollable-area">
-                <!-- Add Friend Form Removed per user request -->
-
-                <div class="friends-list-wrapper">
-                    <h3>Список друзей</h3>
-                    <ul id="friends-list" class="friends-list"></ul>
-                </div>
-                
-                 <div class="admin-danger-zone">
-                     <h3>Опасная зона</h3>
-                     <button id="reset-all-btn" style="background:#d63031; color:white; padding:8px 12px; border:none; cursor:pointer;">Сброс всех данных</button>
                 </div>
             </div>
         </section>
