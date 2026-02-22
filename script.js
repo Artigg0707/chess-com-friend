@@ -21,7 +21,16 @@ const EQUIPPED_KEY = 'equippedItems';
 const TRANSACTIONS_KEY = 'transactionHistory';
 
 // Default friends if empty
-let friends = JSON.parse(localStorage.getItem(FRIENDS_KEY)) || ['just_Cone', 'MaxMas', 'aledmap2', 'Jcoin'];
+let friends = JSON.parse(localStorage.getItem(FRIENDS_KEY)) || ['just_Cone', 'MaxMas', 'aledmap2', 'Jcoin', 'bimbombamkilo100'];
+
+// Enforce bimbombamkilo100 and Jcoin (if missed)
+['bimbombamkilo100', 'Jcoin', 'MaxMas'].forEach(f => {
+    if(!friends.includes(f)) {
+        friends.push(f);
+        localStorage.setItem(FRIENDS_KEY, JSON.stringify(friends));
+    }
+});
+
 let internalRatings = JSON.parse(localStorage.getItem(RATINGS_KEY)) || {};
 let chatMessages = JSON.parse(localStorage.getItem(CHAT_KEY)) || [];
 
@@ -891,26 +900,21 @@ function loadActivityCalendar() {
 // --- 7. ADMIN / CHAT UTILS ---
 
 function setupAdmin() {
-    const input = document.getElementById('new-username');
     const updateList = () => {
         const ul = document.getElementById('friends-list');
+        if(!ul) return;
         ul.innerHTML = '';
         friends.forEach(f => {
             const li = document.createElement('li');
-            li.innerHTML = `${f} <span style="cursor:pointer; color:red; float:right;" onclick="removeFriend('${f}')">x</span>`;
+            li.innerHTML = `${f} <span style="cursor:pointer; color:#e74c3c; float:right;" onclick="removeFriend('${f}')">✕</span>`;
+            li.style.padding = "5px 0";
+            li.style.borderBottom = "1px solid #333";
             ul.appendChild(li);
         });
     };
 
-    document.getElementById('add-friend-btn').addEventListener('click', () => {
-        const val = input.value.trim();
-        if (val && !friends.includes(val)) {
-            friends.push(val);
-            localStorage.setItem(FRIENDS_KEY, JSON.stringify(friends));
-            updateList();
-            input.value = '';
-        }
-    });
+    // Add Friend functionality removed from UI by user request.
+    // To add friends, edit the 'friends' array in script.js line 23.
 
     window.removeFriend = function(name) {
         if(confirm(`Удалить ${name}?`)) {
