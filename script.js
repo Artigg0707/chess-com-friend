@@ -636,6 +636,8 @@ function renderProfile(username) {
 function renderInventory(username) {
     const isMe = (username === currentUser);
     const invDiv = document.getElementById('inventory-container');
+    if(!invDiv) return;
+
     invDiv.innerHTML = '';
 
     const myInv = userInventory[username] || { badges: [], effects: [], colors: [], titles: [] };
@@ -697,6 +699,7 @@ function toggleEquip(type, value) {
 
 function renderTransactions(username) {
     const list = document.getElementById('transaction-list');
+    if(!list) return;
     list.innerHTML = '';
     const hist = transactions[username] || [];
     
@@ -825,6 +828,7 @@ window.buyItem = function(itemId) {
 // --- 6. ACTIVITY CALENDAR ---
 function loadActivityCalendar() {
     const container = document.getElementById('activity-container');
+    if(!container) return;
     container.innerHTML = '';
 
     friends.forEach(user => {
