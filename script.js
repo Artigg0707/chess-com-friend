@@ -10,7 +10,6 @@
 */
 
 // --- CONFIG & STATE ---
-const FRIENDS_KEY = 'chessboardFriends';
 const RATINGS_KEY = 'internalRatings';
 const CHAT_KEY = 'chatMessages';
 
@@ -20,16 +19,9 @@ const INVENTORY_KEY = 'userInventory';
 const EQUIPPED_KEY = 'equippedItems';
 const TRANSACTIONS_KEY = 'transactionHistory';
 
-// Default friends if empty
-let friends = JSON.parse(localStorage.getItem(FRIENDS_KEY)) || ['just_Cone', 'MaxMas', 'aledmap2', 'Jcoin', 'bimbombamkilo100'];
-
-// Enforce bimbombamkilo100 and Jcoin (if missed)
-['bimbombamkilo100', 'Jcoin', 'MaxMas'].forEach(f => {
-    if(!friends.includes(f)) {
-        friends.push(f);
-        localStorage.setItem(FRIENDS_KEY, JSON.stringify(friends));
-    }
-});
+// Users are managed by backend now
+let users = [];
+let friends = []; // lichess usernames only
 
 let internalRatings = JSON.parse(localStorage.getItem(RATINGS_KEY)) || {};
 let chatMessages = JSON.parse(localStorage.getItem(CHAT_KEY)) || [];
@@ -41,7 +33,8 @@ let equippedItems = JSON.parse(localStorage.getItem(EQUIPPED_KEY)) || {};
 let transactions = JSON.parse(localStorage.getItem(TRANSACTIONS_KEY)) || {};
 
 let gamesCache = [];
-let currentUser = localStorage.getItem('currentUser') || null;
+let currentUser = null;
+let currentUserLichess = null;
 
 // SHOP CATALOG
 const SHOP_ITEMS = [
@@ -80,20 +73,110 @@ const SHOP_ITEMS = [
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
-    initLogin();
     setupTabs();
     setupChat();
-    
-    // Default load
-    fetchLichessRatings(); // Load External
-    loadGamesHistory();    // Load Games & Internal logic
-    updateShopUI();
-    
-    // Check local storage init for friends
-    if(!localStorage.getItem(FRIENDS_KEY)) {
-        localStorage.setItem(FRIENDS_KEY, JSON.stringify(friends));
-    }
+    initAuthUI();
+    bootstrapApp().catch((e) => {
+        console.error(e);
+        showLoginModal();
+        setAuthError('Сервер недоступен. Запусти backend на http://localhost:5000');
+    });
+
+    setupDuelsUI();
 });
+
+let duelsPollTimer = null;
+
+function setupDuelsUI() {
+    const btn = document.getElementById('duels-refresh-btn');
+    if (btn) {
+        btn.addEventListener('click', () => {
+            refreshDuelsMatrix({ force: true });
+        });
+    }
+
+    // Low-frequency polling so matrix updates when new games/users appear.
+    if (!duelsPollTimer) {
+        duelsPollTimer = setInterval(() => {
+            const active = document.getElementById('tab-duels')?.classList.contains('active');
+            if (active) refreshDuelsMatrix({ force: false });
+        }, 30 * 1000);
+    }
+}
+
+async function apiFetch(path, options) {
+    const res = await fetch(path, {
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(options && options.headers ? options.headers : {})
+        },
+        ...options,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        const msg = data && data.error ? data.error : `HTTP ${res.status}`;
+        const err = new Error(msg);
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}
+
+async function bootstrapApp() {
+    await refreshUsers();
+    await refreshMe();
+
+    // Default tab data
+    fetchLichessRatings();
+    loadGamesHistory();
+}
+
+async function refreshUsers() {
+    const data = await apiFetch('/api/users');
+    users = data.users || [];
+    friends = users
+        .map(u => u.lichessUsername)
+        .filter(Boolean);
+}
+
+function buildLichessToSiteMap() {
+    const m = new Map();
+    (users || []).forEach(u => {
+        if (u && u.lichessUsername && u.username) {
+            m.set(u.lichessUsername.toLowerCase(), u.username);
+        }
+    });
+    return m;
+}
+
+async function refreshMe() {
+    const data = await apiFetch('/api/me');
+    const u = data.user;
+    if (u) {
+        currentUser = u.username;
+        currentUserLichess = u.lichessUsername;
+        hideLoginModal();
+    } else {
+        currentUser = null;
+        currentUserLichess = null;
+        showLoginModal();
+    }
+    updateMiniProfile();
+    updateLichessLinkStatus();
+}
+
+function updateLichessLinkStatus() {
+    const el = document.getElementById('lichess-link-status');
+    if (!el) return;
+    if (!currentUser) {
+        el.textContent = 'Статус: войдите, чтобы привязать Lichess';
+        return;
+    }
+    el.textContent = currentUserLichess
+        ? `Статус: привязан ${currentUserLichess}`
+        : 'Статус: не привязан';
+}
 
 // --- TABS LOGIC ---
 function setupTabs() {
@@ -131,9 +214,12 @@ function setupTabs() {
     document.getElementById('games-filter-select').addEventListener('change', renderGamesList);
 
     // Profile Select
-    document.getElementById('profile-select-user').addEventListener('change', (e) => {
-        renderProfile(e.target.value);
-    });
+    const profileSelect = document.getElementById('profile-select-user');
+    if (profileSelect) {
+        profileSelect.addEventListener('change', (e) => {
+            renderProfile(e.target.value);
+        });
+    }
 }
 
 function switchTab(tabId) {
@@ -147,75 +233,190 @@ function switchTab(tabId) {
     const targetBtn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
     if(targetBtn) targetBtn.classList.add('active');
 
-    if (tabId === 'activity') loadActivityCalendar();
-    
     // Refresh Profile if entered
     if (tabId === 'profile') {
         populateProfileSelector();
-        renderProfile(currentUser || friends[0]);
+        const fallback = users[0]?.username;
+        renderProfile(currentUser || fallback);
     }
 
-    if (tabId === 'shop') updateShopUI();
+    if (tabId === 'duels') {
+        refreshDuelsMatrix({ force: false });
+    }
 }
 
-// --- LOGIN SYSTEM ---
-function initLogin() {
-    const modal = document.getElementById('login-modal');
-    const select = document.getElementById('login-select');
-    const input = document.getElementById('login-username');
-    const btn = document.getElementById('login-confirm');
+async function refreshDuelsMatrix({ force } = {}) {
+    const table = document.getElementById('duels-matrix');
+    const spinner = document.getElementById('duels-spinner');
+    const last = document.getElementById('duels-last-update');
+    if (!table) return;
 
-    // Populate select
-    select.innerHTML = '<option value="">-- Выберите --</option>';
-    friends.forEach(f => {
-        select.innerHTML += `<option value="${f}">${f}</option>`;
-    });
+    if (spinner) spinner.style.display = 'block';
+    try {
+        const view = await apiFetch(`/api/duels${force ? '?force=1' : ''}`, { method: 'GET' });
+        renderDuelsMatrix(table, view);
 
-    // Check if logged in
-    if (currentUser && friends.includes(currentUser)) {
-        modal.classList.remove('active');
-        updateMiniProfile();
-    } else {
-        modal.classList.add('active');
+        const updated = view.updatedAt ? new Date(view.updatedAt) : null;
+        if (last) {
+            last.textContent = updated
+                ? `Обновлено: ${updated.toLocaleString()}`
+                : 'Обновлено: никогда';
+        }
+    } catch (e) {
+        console.error(e);
+        if (last) last.textContent = `Ошибка: ${e.message}`;
+    } finally {
+        if (spinner) spinner.style.display = 'none';
+    }
+}
+
+function renderDuelsMatrix(table, view) {
+    const names = view?.names || [];
+    const cells = view?.cells || {};
+
+    if (names.length === 0) {
+        table.innerHTML = '<tr><td style="padding:12px; text-align:left;">Пока нет пользователей.</td></tr>';
+        return;
     }
 
-    btn.addEventListener('click', () => {
-        const user = select.value || input.value.trim();
-        if (user) {
-            currentUser = user;
-            if (!friends.includes(user)) {
-                friends.push(user);
-                localStorage.setItem(FRIENDS_KEY, JSON.stringify(friends));
+    // Header row
+    let html = '<thead><tr>';
+    html += '<th class="corner">Игрок</th>';
+    for (const col of names) {
+        html += `<th title="${escapeHtml(col)}">${escapeHtml(col)}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    for (const row of names) {
+        html += '<tr>';
+        html += `<td class="row-h">${escapeHtml(row)}</td>`;
+        for (const col of names) {
+            if (row === col) {
+                html += '<td style="background: var(--bg-secondary); color: var(--text-muted);">—</td>';
+                continue;
             }
-            localStorage.setItem('currentUser', user);
-            
-            // Init economy for new user
-            if (pawnBalances[user] === undefined) {
-                pawnBalances[user] = 0; // Start with 0
-                localStorage.setItem(PAWN_BALANCES_KEY, JSON.stringify(pawnBalances));
+            const s = cells?.[row]?.[col];
+            if (!s || !s.games) {
+                html += '<td><div class="duels-cell"><div class="wld">0-0-0</div><div class="meta">0</div></div></td>';
+                continue;
             }
-            
-            modal.classList.remove('active');
-            updateMiniProfile();
-            updateShopUI();
-            location.reload(); 
+            const w = Number(s.w || 0);
+            const l = Number(s.l || 0);
+            const d = Number(s.d || 0);
+            const g = Number(s.games || 0);
+            const cls = w > l ? 'good' : (l > w ? 'bad' : 'neutral');
+            html += `
+                <td>
+                    <div class="duels-cell ${cls}">
+                        <div class="wld">${w}-${l}-${d}</div>
+                        <div class="meta">${g}</div>
+                    </div>
+                </td>
+            `;
         }
-    });
+        html += '</tr>';
+    }
+
+    html += '</tbody>';
+    table.innerHTML = html;
+}
+
+function escapeHtml(s) {
+    return String(s)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+// --- AUTH UI (Backend) ---
+function showLoginModal() {
+    const modal = document.getElementById('login-modal');
+    if (modal) modal.classList.add('active');
+}
+
+function hideLoginModal() {
+    const modal = document.getElementById('login-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function setAuthError(message) {
+    const el = document.getElementById('auth-error');
+    if (el) el.textContent = message || '';
+}
+
+function initAuthUI() {
+    const loginBtn = document.getElementById('auth-login');
+    const registerBtn = document.getElementById('auth-register');
+    const linkBtn = document.getElementById('link-lichess');
+
+    if (loginBtn) {
+        loginBtn.addEventListener('click', async () => {
+            setAuthError('');
+            const username = document.getElementById('auth-username')?.value;
+            const password = document.getElementById('auth-password')?.value;
+            try {
+                await apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+                await refreshUsers();
+                await refreshMe();
+                fetchLichessRatings();
+            } catch (e) {
+                setAuthError(e.message);
+            }
+        });
+    }
+
+    if (registerBtn) {
+        registerBtn.addEventListener('click', async () => {
+            setAuthError('');
+            const username = document.getElementById('auth-username')?.value;
+            const password = document.getElementById('auth-password')?.value;
+            try {
+                await apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) });
+                await refreshUsers();
+                await refreshMe();
+                fetchLichessRatings();
+            } catch (e) {
+                setAuthError(e.message);
+            }
+        });
+    }
+
+    if (linkBtn) {
+        linkBtn.addEventListener('click', async () => {
+            setAuthError('');
+            if (!currentUser) {
+                setAuthError('Сначала войдите, потом привязывайте Lichess.');
+                return;
+            }
+            const token = document.getElementById('lichess-token')?.value;
+            try {
+                await apiFetch('/api/me/link-lichess', { method: 'POST', body: JSON.stringify({ token }) });
+                await refreshUsers();
+                await refreshMe();
+                fetchLichessRatings();
+                alert('Lichess привязан.');
+            } catch (e) {
+                setAuthError(e.message);
+            }
+        });
+    }
 }
 
 function updateMiniProfile() {
-    if(!currentUser) return;
     const miniName = document.getElementById('mini-username-display');
     const miniBal = document.getElementById('mini-balance-display');
+
+    if (!currentUser) {
+        if (miniName) miniName.textContent = 'Гость';
+        if (miniBal) miniBal.textContent = '';
+        return;
+    }
     
     if(miniName) miniName.textContent = currentUser;
-    if(miniBal) miniBal.textContent = pawnBalances[currentUser] || 0;
+    if(miniBal) miniBal.textContent = currentUserLichess ? `Lichess: ${currentUserLichess}` : 'Lichess: не привязан';
     
-    const banBal = document.getElementById('banner-balance');
-    if(banBal) banBal.textContent = pawnBalances[currentUser] || 0;
-    
-    const shopBal = document.getElementById('shop-user-balance');
-    if(shopBal) shopBal.textContent = pawnBalances[currentUser] || 0;
 }
 
 
@@ -238,33 +439,62 @@ async function fetchLichessRatings() {
     tbody.innerHTML = '';
 
     try {
-        const data = await Promise.all(friends.map(username => 
-            fetch(`https://lichess.org/api/user/${username}`).then(res => res.json())
+        // Fetch ratings only for linked accounts
+        const linked = users.filter(u => u.lichessUsername);
+        const data = await Promise.all(linked.map(u =>
+            fetch(`https://lichess.org/api/user/${u.lichessUsername}`).then(res => res.json())
         ));
 
-        // Sort by Rapid
-        data.sort((a, b) => (b.perfs?.rapid?.rating || 0) - (a.perfs?.rapid?.rating || 0));
+        const lichessMap = new Map();
+        data.forEach(d => {
+            if (d && !d.error && d.username) {
+                lichessMap.set(d.username.toLowerCase(), d);
+            }
+        });
 
-        data.forEach((user, index) => {
-            if (user.error) return; // Skip if user not found
-            
-            const equipped = getEquipped(user.username);
+        const rows = users.map(u => {
+            const lich = u.lichessUsername ? lichessMap.get(u.lichessUsername.toLowerCase()) : null;
+            return {
+                siteUsername: u.username,
+                lichessUsername: u.lichessUsername,
+                rapid: lich?.perfs?.rapid?.rating || 0,
+                blitz: lich?.perfs?.blitz?.rating || 0,
+                bullet: lich?.perfs?.bullet?.rating || 0,
+                hasLichess: Boolean(lich),
+            };
+        });
+
+        // Sort: linked by rapid desc, then unlinked
+        rows.sort((a, b) => {
+            if (a.hasLichess && b.hasLichess) return b.rapid - a.rapid;
+            if (a.hasLichess) return -1;
+            if (b.hasLichess) return 1;
+            return a.siteUsername.localeCompare(b.siteUsername);
+        });
+
+        rows.forEach((r, index) => {
+            const equipped = getEquipped(r.siteUsername);
             const rowClass = equipped.cardColor ? equipped.cardColor : '';
-            
-            // Construct Name
-            let nameHTML = `<a href="https://lichess.org/@/${user.username}" target="_blank" class="username ${equipped.animation || ''}">${user.username}</a>`;
+
+            let nameHTML = `<span class="username ${equipped.animation || ''}">${r.siteUsername}</span>`;
+            if (r.lichessUsername) {
+                nameHTML = `<a href="https://lichess.org/@/${r.lichessUsername}" target="_blank" class="username ${equipped.animation || ''}">${r.siteUsername}</a>`;
+                nameHTML += `<span class="title-text">${r.lichessUsername}</span>`;
+            } else {
+                nameHTML += `<span class="title-text">Lichess не привязан</span>`;
+            }
             if (equipped.badge) nameHTML = `<span class="badge-icon">${equipped.badge}</span> ${nameHTML}`;
             if (equipped.title) nameHTML += `<span class="title-text">${equipped.title}</span>`;
 
             const row = document.createElement('tr');
             if (rowClass) row.className = rowClass;
-            
+
             row.innerHTML = `
                 <td><span class="place">#${index + 1}</span></td>
                 <td><div class="player-info">${nameHTML}</div></td>
-                <td class="rating">${user.perfs?.rapid?.rating || '-'}</td>
-                <td class="rating">${user.perfs?.blitz?.rating || '-'}</td>
-                <td class="rating">${user.perfs?.bullet?.rating || '-'}</td>
+                <td class="rating">${r.hasLichess ? r.rapid : '-'}</td>
+                <td class="rating">${r.hasLichess ? r.blitz : '-'}</td>
+                <td class="rating">${r.hasLichess ? r.bullet : '-'}</td>
             `;
             tbody.appendChild(row);
         });
@@ -281,7 +511,11 @@ async function fetchLichessRatings() {
 // --- 2. GAMES & INTERNAL RATING & ECONOMY ---
 
 async function loadGamesHistory() {
-    if (friends.length === 0) return;
+    if (friends.length === 0) {
+        gamesCache = [];
+        renderGamesList();
+        return;
+    }
     document.getElementById('loading-spinner').style.display = 'block';
     
     let allGames = [];
@@ -344,6 +578,8 @@ function renderGamesList() {
     const filter = document.getElementById('games-filter-select').value;
     list.innerHTML = '';
 
+    const lichessToSite = buildLichessToSiteMap();
+
     const filtered = (filter === 'all') 
         ? gamesCache 
         : gamesCache.filter(g => 
@@ -354,12 +590,15 @@ function renderGamesList() {
         const white = game.players.white.user.name;
         const black = game.players.black.user.name;
         const winner = game.winner; 
-        
-        const wEquip = getEquipped(white);
-        const bEquip = getEquipped(black);
 
-        const wDisplay = `${wEquip.badge ? wEquip.badge : ''} ${white} ${wEquip.title ? `[${wEquip.title}]` : ''} ${winner === 'white' ? '<span class="winner-mark">✓</span>' : ''}`;
-        const bDisplay = `${bEquip.badge ? bEquip.badge : ''} ${black} ${bEquip.title ? `[${bEquip.title}]` : ''} ${winner === 'black' ? '<span class="winner-mark">✓</span>' : ''}`;
+        const whiteSite = lichessToSite.get(white.toLowerCase()) || white;
+        const blackSite = lichessToSite.get(black.toLowerCase()) || black;
+        
+        const wEquip = getEquipped(whiteSite);
+        const bEquip = getEquipped(blackSite);
+
+        const wDisplay = `${wEquip.badge ? wEquip.badge : ''} ${whiteSite} ${wEquip.title ? `[${wEquip.title}]` : ''} ${winner === 'white' ? '<span class="winner-mark">✓</span>' : ''}`;
+        const bDisplay = `${bEquip.badge ? bEquip.badge : ''} ${blackSite} ${bEquip.title ? `[${bEquip.title}]` : ''} ${winner === 'black' ? '<span class="winner-mark">✓</span>' : ''}`;
 
         const card = document.createElement('div');
         const whiteClass = winner === 'white' ? 'winner-text' : '';
@@ -387,20 +626,25 @@ function renderGamesList() {
 function populateFilterSelect() {
     const s = document.getElementById('games-filter-select');
     s.innerHTML = '<option value="all">Все партии</option>';
-    friends.forEach(f => {
-        const opt = document.createElement('option');
-        opt.value = f;
-        opt.textContent = f;
-        s.appendChild(opt);
-    });
+    users
+        .filter(u => u.lichessUsername)
+        .forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.lichessUsername;
+            opt.textContent = u.username;
+            s.appendChild(opt);
+        });
 }
 
 
 // --- 3. INTERNAL ELO & PAWN CALCULATION ---
 
 function recalculateInternalRatings() {
+    const lichessToSite = buildLichessToSiteMap();
+
     // 1. Reset Stats
-    friends.forEach(f => {
+    users.forEach(u => {
+        const f = u.username;
         internalRatings[f] = { rating: 100, games: 0, wins: 0, loss: 0, draw: 0 };
     });
 
@@ -415,7 +659,8 @@ function recalculateInternalRatings() {
     
     // Calculate total spent so far
     const lifetimeSpent = {};
-    friends.forEach(f => {
+    users.forEach(u => {
+        const f = u.username;
         lifetimeSpent[f] = 0;
         const hist = transactions[f] || [];
         hist.forEach(t => {
@@ -424,21 +669,26 @@ function recalculateInternalRatings() {
     });
 
     const lifetimeEarned = {};
-    friends.forEach(f => lifetimeEarned[f] = 0);
+    users.forEach(u => lifetimeEarned[u.username] = 0);
     
     // Streaks
     const streaks = {}; 
-    friends.forEach(f => streaks[f] = 0);
+    users.forEach(u => streaks[u.username] = 0);
     const daily = {}; // key: user_date
     const newTrans = {}; // user -> []
-    friends.forEach(f => newTrans[f] = []);
+    users.forEach(u => newTrans[u.username] = []);
 
     // Process oldest to newest
     const chronologicalGames = [...gamesCache].sort((a, b) => a.createdAt - b.createdAt);
 
     chronologicalGames.forEach(game => {
-        const w = game.players.white.user.name;
-        const b = game.players.black.user.name;
+        const wL = game.players.white.user.name;
+        const bL = game.players.black.user.name;
+
+        const w = lichessToSite.get(wL.toLowerCase());
+        const b = lichessToSite.get(bL.toLowerCase());
+
+        if (!w || !b) return;
         
         if (!internalRatings[w]) internalRatings[w] = { rating: 100, games:0, wins:0, loss:0, draw:0 };
         if (!internalRatings[b]) internalRatings[b] = { rating: 100, games:0, wins:0, loss:0, draw:0 };
@@ -505,7 +755,8 @@ function recalculateInternalRatings() {
     localStorage.setItem(RATINGS_KEY, JSON.stringify(internalRatings));
 
     // Update Economy
-    friends.forEach(f => {
+    users.forEach(u => {
+        const f = u.username;
         // Balance = Earned - Spent
         const earned = lifetimeEarned[f] || 0;
         const spent = lifetimeSpent[f] || 0;
@@ -538,9 +789,9 @@ function renderInternalTable() {
     thead.innerHTML = `<th>#</th><th>Игрок</th><th>Вн. Рейтинг</th><th>Игр</th><th>Винрейт</th>`;
     tbody.innerHTML = '';
 
-    const sorted = friends.map(f => {
-        const stats = internalRatings[f] || { rating: 100, games: 0, wins: 0 };
-        return { name: f, ...stats };
+    const sorted = users.map(u => {
+        const stats = internalRatings[u.username] || { rating: 100, games: 0, wins: 0 };
+        return { name: u.username, ...stats };
     });
 
     sorted.sort((a, b) => b.rating - a.rating);
@@ -575,11 +826,11 @@ function renderInternalTable() {
 function populateProfileSelector() {
     const s = document.getElementById('profile-select-user');
     s.innerHTML = '';
-    friends.forEach(f => {
+    users.forEach(u => {
         const opt = document.createElement('option');
-        opt.value = f;
-        opt.textContent = f;
-        if (f === currentUser) opt.selected = true;
+        opt.value = u.username;
+        opt.textContent = u.username;
+        if (u.username === currentUser) opt.selected = true;
         s.appendChild(opt);
     });
 }

@@ -1,0 +1,20 @@
+{
+  "users": [
+    {
+      "id": "192e2176-cac1-4065-a0a2-cf1a7deb4de4",
+      "username": "JstCone",
+      "passwordHash": "$2a$12$9FVPb4mY9..P3fWut6NtzOdTNkHG1L9KBDcyk5PMOfIANfwZx3Lsa",
+      "createdAt": "2026-02-24T20:28:47.521Z",
+      "lichess": null
+    }
+  ],
+  "stats": {
+    "internalRatings": {},
+    "internalRatingsUpdatedAt": null
+  },
+  "duels": {
+    "updatedAt": "2026-02-24T21:09:25.326Z",
+    "lastSync": {},
+    "pairs": {}
+  }
+}

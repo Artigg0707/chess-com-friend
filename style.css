@@ -642,9 +642,9 @@ body {
 @keyframes spin { 0% {transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
 
 /* Removed "No styles" for effects, but keep classes to prevent breaking */
-.anim-shimmer { }
-.anim-wave { }
-.anim-pulse { }
+.anim-shimmer { animation: none; }
+.anim-wave { animation: none; }
+.anim-pulse { animation: none; }
 .anim-rainbow { 
     /* Tone it down - just a color */
     background: none; -webkit-background-clip: unset; background-clip: unset; 
@@ -678,6 +678,79 @@ body {
     padding: 30px;
     width: 320px;
     text-align: center;
+}
+
+/* --- DUELS MATRIX --- */
+.duels-hint {
+    color: var(--text-muted);
+    font-size: 12px;
+    margin: 0 0 10px 0;
+}
+
+.duels-matrix-wrap {
+    border: 1px solid var(--border-color);
+    background: var(--bg-panel);
+    padding: 0;
+    overflow: auto;
+}
+
+.duels-matrix {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    min-width: 720px;
+}
+
+.duels-matrix th,
+.duels-matrix td {
+    border: 1px solid var(--border-color);
+    padding: 8px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-primary);
+    background: var(--bg-panel);
+}
+
+.duels-matrix th {
+    font-weight: 600;
+    background: var(--bg-secondary);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.duels-matrix th.corner {
+    left: 0;
+    z-index: 3;
+}
+
+.duels-matrix td.row-h {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--bg-secondary);
+    font-weight: 600;
+    text-align: left;
+}
+
+.duels-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1.15;
+}
+
+.duels-cell .wld {
+    font-variant-numeric: tabular-nums;
+}
+
+.duels-cell.good { background: rgba(46, 204, 113, 0.08); }
+.duels-cell.bad { background: rgba(231, 76, 60, 0.08); }
+.duels-cell.neutral { background: rgba(241, 196, 15, 0.06); }
+
+.duels-cell .meta {
+    color: var(--text-muted);
+    font-size: 11px;
 }
 .modal-card h2 { text-transform: uppercase; font-size: 16px; margin-bottom: 20px; color: var(--text-highlight); }
 .modal-card input, .modal-card select {
@@ -801,10 +874,6 @@ body {
 
 /* Correct Mobile Chat Flex Layout */
 @media (max-width: 768px) {
-    .chat-sidebar {
-        /* Already defined: top:0, bottom:60px, display:flex, flex-col */
-    }
-
     .chat-wrapper {
         flex: 1;
         display: flex;

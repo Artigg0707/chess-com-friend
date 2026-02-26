@@ -28,6 +28,9 @@
             <button class="nav-btn" data-tab="games">
                 <i class="fa-solid fa-chess-board"></i> Партии
             </button>
+            <button class="nav-btn" data-tab="duels">
+                <i class="fa-solid fa-table-cells"></i> Дуэли
+            </button>
             <button class="nav-btn" data-tab="profile">
                 <i class="fa-solid fa-user"></i> Профиль
             </button>
@@ -109,6 +112,26 @@
             </div>
         </section>
 
+        <!-- Tab: Duels -->
+        <section id="tab-duels" class="tab-content">
+            <header class="content-header">
+                <h1>Матрица дуэлей</h1>
+                <div class="header-actions">
+                    <div class="last-update" id="duels-last-update">Обновлено: никогда</div>
+                    <button id="duels-refresh-btn" class="icon-btn" title="Обновить"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+            </header>
+
+            <div class="duels-hint">
+                Показывает W-L-D между зарегистрированными пользователями (учитываются только привязанные Lichess аккаунты).
+            </div>
+
+            <div class="duels-matrix-wrap scrollable-area" id="duels-matrix-wrap">
+                <div class="spinner" id="duels-spinner" style="display:none;"></div>
+                <table class="duels-matrix" id="duels-matrix"></table>
+            </div>
+        </section>
+
         <!-- Tab: Profile -->
         <section id="tab-profile" class="tab-content">
             <header class="content-header">
@@ -117,6 +140,20 @@
                     <!-- Options populated by JS -->
                 </select>
             </header>
+
+            <div style="padding: 0 20px 12px 20px;">
+                <div style="background: var(--bg-panel); border: 1px solid var(--border-color); padding: 12px;">
+                    <div style="font-weight: 600;">Привязка Lichess (опционально)</div>
+                    <div id="lichess-link-status" style="margin-top: 4px; color: var(--text-muted); font-size: 12px;">Статус: —</div>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <input type="password" id="lichess-token" placeholder="Lichess API Token" autocomplete="off" style="flex:1;">
+                        <button id="link-lichess" class="login-confirm-btn" style="white-space:nowrap;">Привязать</button>
+                    </div>
+                    <div style="margin-top: 8px; color: var(--text-muted); font-size: 11px; line-height: 1.35;">
+                        Токен нужен только для подтверждения владения аккаунтом. Если не хочешь — просто не привязывай.
+                    </div>
+                </div>
+            </div>
             
             <div class="profile-layout scrollable-area">
                 <div class="profile-card-large" id="profile-card-container">
@@ -148,12 +185,18 @@
 <!-- Login Modal -->
 <div id="login-modal" class="modal-overlay active">
     <div class="modal-card">
-        <h2>Кто ты?</h2>
-        <p>Выберите свой никнейм для доступа к экономике и чату</p>
-        <select id="login-select"></select>
-        <div class="divider">ИЛИ</div>
-        <input type="text" id="login-username" placeholder="Введите ник (если нет в списке)">
-        <button id="login-confirm" class="login-confirm-btn">Войти</button>
+        <h2>Вход</h2>
+        <p>Зарегистрируйся или войди. Привязка Lichess — опционально и делается в профиле после входа.</p>
+
+        <input type="text" id="auth-username" placeholder="Логин (3-24: A-Z, 0-9, _)" autocomplete="username">
+        <input type="password" id="auth-password" placeholder="Пароль (минимум 8 символов)" autocomplete="current-password">
+
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button id="auth-login" class="login-confirm-btn" style="flex:1;">Войти</button>
+            <button id="auth-register" class="login-confirm-btn" style="flex:1; background:#40444b;">Регистрация</button>
+        </div>
+
+        <div id="auth-error" style="margin-top:10px; color:#e74c3c; font-size:12px; min-height:16px;"></div>
     </div>
 </div>
 
