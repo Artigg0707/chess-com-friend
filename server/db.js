@@ -1,7 +1,10 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'db.json');
+const DEFAULT_DB_PATH = path.join(__dirname, '..', 'data', 'db.json');
+const DB_PATH = process.env.DB_PATH
+  ? path.resolve(process.env.DB_PATH)
+  : DEFAULT_DB_PATH;
 
 let cachedDb = null;
 let writeQueue = Promise.resolve();

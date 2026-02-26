@@ -17,6 +17,12 @@ const { getLichessAccountFromToken } = require('./lichess');
 
 const app = express();
 
+// Running behind a reverse proxy on platforms like Render.
+// Needed so req.secure is derived from X-Forwarded-Proto.
+if (process.env.RENDER_EXTERNAL_URL || process.env.TRUST_PROXY === '1') {
+  app.set('trust proxy', 1);
+}
+
 app.use(helmet({
   contentSecurityPolicy: false, // keep simple for static app
 }));
@@ -32,7 +38,7 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: 'lax',
-      secure: false, // set true behind HTTPS
+      secure: process.env.NODE_ENV === 'production' ? 'auto' : false,
       maxAge: 1000 * 60 * 60 * 24 * 7,
     },
   })
