@@ -75,6 +75,7 @@ const SHOP_ITEMS = [
 document.addEventListener('DOMContentLoaded', () => {
     setupTabs();
     setupChat();
+    setupMobileChatToggle();
     initAuthUI();
     bootstrapApp().catch((e) => {
         console.error(e);
@@ -1154,80 +1155,93 @@ function setupChat() {
     const inp = document.getElementById('chat-input');
     const btn = document.getElementById('chat-send-btn');
 
+    if (!win || !inp || !btn) return;
+
     const renderMsgs = () => {
-        if(!win) return;
         win.innerHTML = '';
         chatMessages.forEach(m => {
             const div = document.createElement('div');
-            div.className = `message ${m.user === currentUser ? 'mine' : ''}`;
-            div.innerHTML = `<strong>${m.user}</strong>: ${m.text}`;
+            const username = m?.username || m?.user || '???';
+            const text = m?.text || '';
+            div.className = `message ${username === currentUser ? 'mine' : ''}`;
+            div.innerHTML = `<strong>${escapeHtml(username)}</strong>: ${escapeHtml(text)}`;
             win.appendChild(div);
         });
         
     };
 
+    const refreshChat = async () => {
+        try {
+            const data = await apiFetch('/api/chat', { method: 'GET' });
+            chatMessages = data.messages || [];
+            renderMsgs();
+            win.scrollTop = win.scrollHeight;
+        } catch (e) {
+            // If chat fails (e.g. server down), don't break the whole app.
+            console.warn('Chat refresh failed:', e.message || e);
+        }
+    };
+
     const send = () => {
         const text = inp.value.trim();
-        if (text && currentUser) {
-            chatMessages.push({ user: currentUser, text });
-            if (chatMessages.length > 50) chatMessages.shift();
-            localStorage.setItem(CHAT_KEY, JSON.stringify(chatMessages));
-            inp.value = '';
-            renderMsgs();
-            
-            // Scroll to bottom
-            setTimeout(() => win.scrollTop = win.scrollHeight, 50);
-        } else if (!currentUser) {
-            alert('Сначала войдите!');
+        if (!currentUser) {
+            showLoginModal();
+            setAuthError('Войдите, чтобы писать в чат.');
+            return;
         }
+        if (!text) return;
+
+        apiFetch('/api/chat', { method: 'POST', body: JSON.stringify({ text }) })
+            .then((data) => {
+                inp.value = '';
+                chatMessages = data.messages || chatMessages;
+                renderMsgs();
+                setTimeout(() => win.scrollTop = win.scrollHeight, 50);
+            })
+            .catch((e) => {
+                console.warn('Chat send failed:', e.message || e);
+                showLoginModal();
+                setAuthError(e.message || 'Ошибка отправки');
+            });
     };
 
     btn.onclick = send;
     inp.onkeypress = (e) => { if(e.key === 'Enter') send(); };
     renderMsgs();
-    
+
+    refreshChat();
+
     // Poll
     setInterval(() => {
-        const fresh = JSON.parse(localStorage.getItem(CHAT_KEY)) || [];
-        if (fresh.length !== chatMessages.length) {
-            chatMessages = fresh;
-            renderMsgs();
-            win.scrollTop = win.scrollHeight;
-        }
+        refreshChat();
     }, 2000);
 }
 
 // Admin/settings tab removed.
 
 // --- MOBILE CHAT LOGIC ---
-document.getElementById("mobile-chat-toggle").addEventListener("click", () => {
-    const chatSidebar = document.querySelector(".chat-sidebar");
-    const chatBtn = document.getElementById("mobile-chat-toggle");
-    
-    // Toggle Active State
-    const isActive = chatSidebar.classList.toggle("active");
-    
-    if (isActive) {
-        // Visual: Make this button active, others inactive
-        document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.remove("active"));
-        chatBtn.classList.add("active");
-    } else {
-        // Closed chat - maybe restore dashboard or just remove active from self
-        chatBtn.classList.remove("active");
-        // Optionally restore the first tab active state if needed, 
-        // or let user click another tab to go back.
-        // For better UX, let"s switch back to "leaderboard" (default) or just leave it.
-        // Let"s simulate click on "leaderboard" to return to main view clearly?
-        // Or just leave it blank? Let"s switch to first tab.
-        switchTab("leaderboard");
-    }
-});
+function setupMobileChatToggle() {
+    const chatSidebar = document.querySelector('.chat-sidebar');
+    const chatBtn = document.getElementById('mobile-chat-toggle');
+    if (!chatSidebar || !chatBtn) return;
 
-// Hide chat when clicking any other nav button
-document.querySelectorAll(".nav-btn:not(#mobile-chat-toggle)").forEach(btn => {
-    btn.addEventListener("click", () => {
-        document.querySelector(".chat-sidebar").classList.remove("active");
-        document.getElementById("mobile-chat-toggle").classList.remove("active");
+    chatBtn.addEventListener('click', () => {
+        const isActive = chatSidebar.classList.toggle('active');
+        if (isActive) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            chatBtn.classList.add('active');
+        } else {
+            chatBtn.classList.remove('active');
+            switchTab('leaderboard');
+        }
     });
-});
+
+    document.querySelectorAll('.nav-btn').forEach((btn) => {
+        if (btn === chatBtn) return;
+        btn.addEventListener('click', () => {
+            chatSidebar.classList.remove('active');
+            chatBtn.classList.remove('active');
+        });
+    });
+}
 

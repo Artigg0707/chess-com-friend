@@ -26,7 +26,12 @@ async function loadDb() {
   const duels = parsed.duels && typeof parsed.duels === 'object'
     ? parsed.duels
     : { updatedAt: null, lastSync: {}, pairs: {} };
-  return { ...parsed, users, duels };
+  const chat0 = parsed.chat && typeof parsed.chat === 'object'
+    ? parsed.chat
+    : {};
+  const messages = Array.isArray(chat0.messages) ? chat0.messages : [];
+  const chat = { ...chat0, messages };
+  return { ...parsed, users, duels, chat };
 }
 
 async function getDb() {

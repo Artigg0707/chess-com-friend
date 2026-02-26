@@ -151,6 +151,60 @@ app.get('/api/users', async (req, res) => {
   return res.json({ users: db.users.map(publicUser) });
 });
 
+// --- CHAT ---
+app.get('/api/chat', async (req, res) => {
+  const db = await getDb();
+  const messages = Array.isArray(db.chat?.messages) ? db.chat.messages : [];
+  return res.json({ messages: messages.slice(-100) });
+});
+
+app.post('/api/chat', requireAuth, async (req, res) => {
+  const text = String(req.body?.text || '').trim();
+  if (!text) {
+    return res.status(400).json({ error: 'Empty message' });
+  }
+  if (text.length > 280) {
+    return res.status(400).json({ error: 'Message too long (max 280)' });
+  }
+
+  try {
+    const now = new Date().toISOString();
+
+    const db = await withDbWrite(async (db0) => {
+      const me = db0.users.find((u) => u.id === req.session.userId);
+      if (!me) {
+        const err = new Error('User not found');
+        err.status = 404;
+        throw err;
+      }
+
+      const prev = Array.isArray(db0.chat?.messages) ? db0.chat.messages : [];
+      const nextMsg = {
+        id: crypto.randomUUID(),
+        userId: me.id,
+        username: me.username,
+        text,
+        createdAt: now,
+      };
+
+      const nextMessages = [...prev, nextMsg].slice(-200);
+      return {
+        ...db0,
+        chat: {
+          ...(db0.chat && typeof db0.chat === 'object' ? db0.chat : {}),
+          messages: nextMessages,
+        },
+      };
+    });
+
+    const messages = Array.isArray(db.chat?.messages) ? db.chat.messages : [];
+    return res.json({ ok: true, messages: messages.slice(-100) });
+  } catch (e) {
+    const status = e.status || 500;
+    return res.status(status).json({ error: e.message || 'Server error' });
+  }
+});
+
 // --- DUELS MATRIX ---
 app.get('/api/duels', async (req, res) => {
   try {

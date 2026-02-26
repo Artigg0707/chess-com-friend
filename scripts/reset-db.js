@@ -15,6 +15,9 @@ async function main() {
       lastSync: {},
       pairs: {},
     },
+    chat: {
+      messages: [],
+    },
   };
 
   await fs.mkdir(path.dirname(dbPath), { recursive: true });
