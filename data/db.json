@@ -5,7 +5,10 @@
       "username": "JstCone",
       "passwordHash": "$2a$12$9FVPb4mY9..P3fWut6NtzOdTNkHG1L9KBDcyk5PMOfIANfwZx3Lsa",
       "createdAt": "2026-02-24T20:28:47.521Z",
-      "lichess": null
+      "lichess": {
+        "username": "just_Cone",
+        "linkedAt": "2026-02-26T07:43:37.695Z"
+      }
     }
   ],
   "stats": {
@@ -13,8 +16,10 @@
     "internalRatingsUpdatedAt": null
   },
   "duels": {
-    "updatedAt": "2026-02-24T21:09:25.326Z",
-    "lastSync": {},
+    "updatedAt": "2026-02-26T08:03:00.699Z",
+    "lastSync": {
+      "just_cone": 1771914768142
+    },
     "pairs": {}
   }
 }
