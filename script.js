@@ -387,6 +387,7 @@ function initAuthUI() {
         linkBtn.addEventListener('click', async () => {
             setAuthError('');
             if (!currentUser) {
+                showLoginModal();
                 setAuthError('Сначала войдите, потом привязывайте Lichess.');
                 return;
             }
@@ -398,6 +399,7 @@ function initAuthUI() {
                 fetchLichessRatings();
                 alert('Lichess привязан.');
             } catch (e) {
+                showLoginModal();
                 setAuthError(e.message);
             }
         });
