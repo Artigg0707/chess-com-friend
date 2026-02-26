@@ -17,6 +17,10 @@
     --text-highlight: #fff;
 
     --font-main: 'Roboto', sans-serif;
+
+    /* Aliases used by some components */
+    --bg-secondary: var(--bg-dark);
+    --text-primary: var(--text-main);
 }
 
 * {
